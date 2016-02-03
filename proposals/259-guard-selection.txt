@@ -76,6 +76,20 @@ Extends: 241-suspicious-guard-turnover.txt
     4. If there were no available entry guards, the algorithm adds a new entry
        guard and returns it.  [XXX detail what "adding" means]
 
+       [XXX describe current meaning of "adding"?]
+
+       Adding: If at least GUARDS_TRESHOLD entry guards have been added to
+       PRIMARY_GUARDS too recently, do nothing.
+
+       (Check Failover Threshold)
+
+       Take a list of all possible guard nodes from either UTOPIC_GUARDLIST or
+       DYSTOPIC_GUARDLIST depending on our network status (utopic/dystopic)
+       which are not in PRIMARY_GUARDS.
+
+       If we are prioritizing bandwidth, take the first one in this list.
+       Otherwise, take one at random. Add the taken guard to PRIMARY_GUARDS.
+
     5. Go through the steps 1-4 above algorithm, using the UTOPIC_GUARDLIST.
 
        5.a. When the GUARDLIST_FAILOVER_THRESHOLD of the UTOPIC_GUARDLIST has
