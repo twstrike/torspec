@@ -42,6 +42,36 @@ Extends: 241-suspicious-guard-turnover.txt
   memory and time, in order that these and other portions of the code which
   require an up-to-date guard structure are capable of obtaining such.
 
+  ```
+    [The new meeting](https://lists.torproject.org/pipermail/tor-dev/2016-January/010265.html)
+    decided to avoid disjoint the DYSTOPIC_GUARDS and UTOPIC_GUARDS
+    (mainly for load balancing reasons):
+
+    The original guardset should also include 80/443 bridges (shouldn't
+    have disjoint utopic/dystopic guard sets). We should specify a behavior on
+    how the fascist firewall heuristic should work.
+
+  Here are is an example idea of doing the 80/443 fascist firewall detection
+  heuristic without two disjoint guard pools:
+
+     Alice initializes a single guard list with all the guard nodes. Then she
+     does steps 1 to 4 from §2 of prop259. Then in step 5, if Alice has tried
+     more than GUARDLIST_FAILOVER_THRESHOLD guards from her guard list, she goes
+     into "dystopic firewall" mode. During this mode, Alice only picks 80/443
+     nodes as guards (maybe from a separate dystopic guardlist). If those don't
+     work either (she tries GUARDLIST_FAILOVER_THRESHOLD of them), then Alice
+     "should make a note to herself that the network has potentially gone down"
+     as suggested by step 5.b.
+
+  So in the above idea, there are two guardlists. Guardlist GUARDS has all the
+  guards in the network, and then there is a DYSTOPIC_GUARDS guard list (which is
+  a subset of GUARDS) which is only used during "dystopic firewall" mode. I think
+  this has better load balancing and anonymity properties. But there might be
+  even better behaviors. Feel free to come up with your own and test them!
+
+  By George
+  ```
+
     0. Determine if the local network is potentially accessible.
 
        Alice should attempt to discover if the local network is up or down,
@@ -172,6 +202,14 @@ Extends: 241-suspicious-guard-turnover.txt
 
 §3.2. Data Structures
 
+    ```
+    The new meeting decided to avoid disjoint the DYSTOPIC_GUARDS and UTOPIC_GUARDS
+
+    Should probably not impose a specific data structure to the
+    implementor except if strictly required. Instead maybe state the properties
+    that such a data structure needs. Maybe we can put the hashring idea in the
+    appendix?
+    ```
     UTOPIC_GUARDLIST
     DYSTOPIC_GUARDLIST
         These lists consist of a subset of UTOPIC_GUARDS and DYSTOPIC_GUARDS
