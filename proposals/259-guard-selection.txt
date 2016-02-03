@@ -68,6 +68,11 @@ Extends: 241-suspicious-guard-turnover.txt
        [What is a fitting entry guard? The code suggest it is an entry guard
        listed in the most recent consensus AND it has not been tried already]
 
+    3.5 If there was no available entry guards to return and enough time has
+        passed since the last retry attempt (2), retry the PRIMARY_GUARDS.
+        Then take the list of all available and fitting entry guards, and
+        return the top one in the list.
+
     4. If there were no available entry guards, the algorithm adds a new entry
        guard and returns it.  [XXX detail what "adding" means]
 
