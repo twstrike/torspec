@@ -65,6 +65,9 @@ Extends: 241-suspicious-guard-turnover.txt
     3. Take the list of all available and fitting entry guards and return the
        top one in the list.
 
+       [What is a fitting entry guard? The code suggest it is an entry guard
+       listed in the most recent consensus AND it has not been tried already]
+
     4. If there were no available entry guards, the algorithm adds a new entry
        guard and returns it.  [XXX detail what "adding" means]
 
@@ -201,7 +204,7 @@ Extends: 241-suspicious-guard-turnover.txt
           while router ∈ GUARDLIST:
            | bw_weight_total ← bw_weight_total + BW(router)
           while router ∈ GUARDLIST:
-           | replications ← FLOOR(CONSENSUS_WEIGHT_FRACTION(BW(router), bw_total) * T)
+           | replications ← FLOOR(CONSENSUS_WEIGHT_FRACTION(BW(router), bw_weight_total) * T)
            | factor ← (S / replications)
            | while replications != 0:
            |  | key ← (TOINT(HMAC(ID)[:X] * replications * factor) mod S
@@ -215,7 +218,7 @@ Extends: 241-suspicious-guard-turnover.txt
           - GUARDLIST is either UTOPIC_GUARDLIST or DYSTOPIC_GUARDLIST,
           - CONSENSUS_WEIGHT_FRACTION is a function for computing a router's
             consensus weight in relation to the summation of consensus weights
-            (bw_total),
+            (bw_weight_total),
           - T is some arbitrary number for translating a router's consensus
             weight fraction into the number of replications,
           - H is some collision-resistant hash digest,
