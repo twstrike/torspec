@@ -105,7 +105,7 @@ Extends: 241-suspicious-guard-turnover.txt
         The maximum number of guards to add to PRIMARY_GUARDS within a specific time
         period, in this case GUARDS_MAX_ADD_THRESHOLD_TIME.
 
-    UTOPIC_GUARDS_FAILOVER_THRESHOLD *
+    POTENTIAL_GUARDS_FAILOVER_THRESHOLD *
         The threshold of guards from POTENTIAL_UTOPIC_GUARDS we can try before giving up
         and assuming we are in a dystopic network.
 
