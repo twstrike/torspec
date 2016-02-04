@@ -207,19 +207,7 @@ Status: Draft
         roughly equivalent in terms of bandwidth to another POTENTIAL_UTOPIC_GUARDS,
         but not necessarily equivalent to a POTENTIAL_DYSTOPIC_GUARDS).
 
-§4. Notes
-
-§4.1. What do we mean by "Stop/warn"?
-
-  By default, we should probably give warnings in most of the above
-  cases for the first version that deploys them.  We can have an
-  on/off/auto setting for whether we will build circuits at all if we're
-  in a "stopped" mode.  Default should be auto, meaning off for now.
-
-  The warning needs to be carefully chosen, and suggest a workaround
-  better than "get a better network" or "clear your state file".
-
-§4.2. Future work
+§4. Future work
 
   We need to make this play nicely with mobility.  When a user has
   three guards on port 9001 and they move to a firewall that only
