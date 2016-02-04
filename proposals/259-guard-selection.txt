@@ -37,79 +37,39 @@ Extends: 241-suspicious-guard-turnover.txt
 
   Before attempting the guard selection procedure, Alice initialises the guard
   data structures and prepopulates the guard structures, including
-  POTENTIAL_UTOPIC_GUARDS and POTENTIAL_DYSTOPIC_GUARDS (cf. §XXX).  Additionally, the
-  structures have been designed to make updates efficient both in terms of
-  memory and time, in order that these and other portions of the code which
-  require an up-to-date guard structure are capable of obtaining such.
+  POTENTIAL_UTOPIC_GUARDS and POTENTIAL_DYSTOPIC_GUARDS.
 
-    0. Determine if the local network is potentially accessible.
+    1. Ensure that PRIMARY_GUARDS contains at least N_PRIMARY_GUARDS that are
+       all present in the latest consensus.
 
-       Alice should attempt to discover if the local network is up or down,
-       based upon information such as the availability of network interfaces
-       and configured routing tables.  See #16120. [0]
+    2. For each entry in PRIMARY_GUARDS that is not marked as offline, test whether
+       it can be reached. If not, mark it as offline. Otherwise return it and finish the algorithm.
 
-       [XXX: This section needs to be fleshed out more.  I'm ignoring it for
-       now, but since others have expressed interest in doing this, I've added
-       this preliminary step. —isis]
+    3. If no entry in PRIMARY_GUARDS is online, for each entry in PRIMARY_GUARDS
+       that haven't been probed for the last 20 minutes clear the offline mark
+       and repeat step 2 and 3 until we have either returned a guard or have no
+       more guards in PRIMARY_GUARDS to try.
 
-    1. Check that we have not already attempted to add too many guards
-       (cf. proposal #241).
+    4. If at least GUARDS_MAX_ADD_THRESHOLD entry guards have been added to
+       PRIMARY_GUARDS within GUARDS_MAX_ADD_THRESHOLD_TIME, return failure from the
+       algorithm.
 
-    2. Then, if the PRIMARY_GUARDS on our list are marked offline, the
-       algorithm attempts to retry them, to ensure that they were not flagged
-       offline erroneously when the network was down. This retry attempt
-       happens only once every 20 mins to avoid infinite loops.
+       If the POTENTIAL_GUARDS_FAILOVER_THRESHOLD of the POTENTIAL_UTOPIC_GUARDS has
+       been tried (without success), Alice should switch to trying steps 1-4 with entry
+       guards from the POTENTIAL_DYSTOPIC_GUARDS as well. Further, if no nodes from
+       POTENTIAL_UTOPIC_GUARDS work, and it appears that the POTENTIAL_DYSTOPIC_GUARDS
+       nodes are accessible, Alice should make a note to herself that she is possibly
+       behind a fascist firewall.
 
-       [Should we do an exponential decay on the retry as s7r suggested? —isis]
+       Otherwise, choose a new guard from POTENTIAL_*_GUARDS using the same
+       mechanism used to initially populate PRIMARY_GUARDS, add it to PRIMARY_GUARDS
+       and redo the algorithm from step 2.
 
-    3. Take the list of all available and fitting entry guards and return the
-       top one in the list.
-
-       [What is a fitting entry guard? The code suggest it is an entry guard
-       listed in the most recent consensus AND it has not been tried already]
-
-    3.5 If there was no available entry guards to return and enough time has
-        passed since the last retry attempt (2), retry the PRIMARY_GUARDS.
-        Then take the list of all available and fitting entry guards, and
-        return the top one in the list.
-
-    4. If there were no available entry guards, the algorithm adds a new entry
-       guard and returns it.  [XXX detail what "adding" means]
-
-       [XXX describe current meaning of "adding"?]
-
-       Adding: If at least GUARDS_TRESHOLD entry guards have been added to
-       PRIMARY_GUARDS too recently, do nothing.
-
-       (Check Failover Threshold)
-
-       Take a list of all possible guard nodes from either POTENTIAL_UTOPIC_GUARDS or
-       POTENTIAL_DYSTOPIC_GUARDS depending on our network status (utopic/dystopic)
-       which are not in PRIMARY_GUARDS.
-
-       If we are prioritizing bandwidth, take the first one in this list.
-       Otherwise, take one at random. Add the taken guard to PRIMARY_GUARDS.
-
-    5. Go through the steps 1-4 above algorithm, using the POTENTIAL_UTOPIC_GUARDS.
-
-       5.a. When the POTENTIAL_GUARDS_FAILOVER_THRESHOLD of the POTENTIAL_UTOPIC_GUARDS has
-            been tried (without success), Alice should begin trying steps 1-4
-            with entry guards from the POTENTIAL_DYSTOPIC_GUARDS as well.  Further,
-            if no nodes from POTENTIAL_UTOPIC_GUARDS work, and it appears that the
-            POTENTIAL_DYSTOPIC_GUARDS nodes are accessible, Alice should make a note
-            to herself that she is possibly behind a fascist firewall.
-
-       5.b. If no nodes from either the POTENTIAL_UTOPIC_GUARDS or the
-            POTENTIAL_DYSTOPIC_GUARDS are working, Alice should make a note to
-            herself that the network has potentially gone down.  Alice should
-            then schedule, at exponentially decaying times, to rerun steps 0-5.
-
-            [XXX Should we do step 0? Or just 1-4?  Should we retain any
-            previous assumptions about FascistFirewall?  —isis]
-
-    6. [XXX Insert potential other fallback mechanisms, e.g. switching to
-       using bridges? —isis]
-
+    5. If no nodes from either the POTENTIAL_UTOPIC_GUARDS or the
+       POTENTIAL_DYSTOPIC_GUARDS are working, Alice should signal failure
+       to the caller, indicating that the network is potentially down. She should also
+       go back over all guards marked as offline in this run and clear the offline status
+       that mark.
 
 §3. New Data Structures, Consensus Parameters, & Configurable Variables
 
@@ -128,13 +88,26 @@ Extends: 241-suspicious-guard-turnover.txt
         the Guard flag - this includes ALL_DYSTOPIC_GUARDS. [XXX this depends
         on results of simulation -ola]
 
-    PRIMARY_GUARDS *
-       The number of first, active, PRIMARY_GUARDS on either the
-       POTENTIAL_UTOPIC_GUARDS or POTENTIAL_DYSTOPIC_GUARDS as "primary". We will go to
-       extra lengths to ensure that we connect to one of our primary guards,
+    N_PRIMARY_GUARDS *
+       The number of first, active guards on either the
+       POTENTIAL_UTOPIC_GUARDS or POTENTIAL_DYSTOPIC_GUARDS to add to PRIMARY_GUARDS.
+       We will go to  extra lengths to ensure that we connect to one of our primary guards,
        before we fall back to a lower priority guard. By "active" we mean that
        we only consider guards that are present in the latest consensus as
        primary.
+
+    PRIMARY_GUARDS
+        A list of N_PRIMARY_GUARDS guards that have been taken from POTENTIAL_*_GUARDS.
+        These should be chosen as the guards with highest bandwidth that are still in the
+        latest consensus.
+
+    GUARDS_MAX_ADD_THRESHOLD *
+        The maximum number of guards to add to PRIMARY_GUARDS within a specific time
+        period, in this case GUARDS_MAX_ADD_THRESHOLD_TIME.
+
+    UTOPIC_GUARDS_FAILOVER_THRESHOLD *
+        The threshold of guards from POTENTIAL_UTOPIC_GUARDS we can try before giving up
+        and assuming we are in a dystopic network.
 
     UTOPIC_GUARDS_ATTEMPTED_THRESHOLD *
     DYSTOPIC_GUARDS_ATTEMPTED_THRESHOLD *
@@ -195,8 +168,6 @@ Extends: 241-suspicious-guard-turnover.txt
   you're behind a FascistFirewall.
 
 §5. References
-
-  [0]: https://trac.torproject.org/projects/tor/ticket/16120
 
 
 -*- coding: utf-8 -*-
