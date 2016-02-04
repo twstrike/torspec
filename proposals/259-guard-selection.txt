@@ -42,36 +42,6 @@ Extends: 241-suspicious-guard-turnover.txt
   memory and time, in order that these and other portions of the code which
   require an up-to-date guard structure are capable of obtaining such.
 
-  ```
-    [The new meeting](https://lists.torproject.org/pipermail/tor-dev/2016-January/010265.html)
-    decided to avoid disjoint the ALL_DYSTOPIC_GUARDS and ALL_UTOPIC_GUARDS
-    (mainly for load balancing reasons):
-
-    The original guardset should also include 80/443 bridges (shouldn't
-    have disjoint utopic/dystopic guard sets). We should specify a behavior on
-    how the fascist firewall heuristic should work.
-
-  Here are is an example idea of doing the 80/443 fascist firewall detection
-  heuristic without two disjoint guard pools:
-
-     Alice initializes a single guard list with all the guard nodes. Then she
-     does steps 1 to 4 from §2 of prop259. Then in step 5, if Alice has tried
-     more than POTENTIAL_GUARDS_FAILOVER_THRESHOLD guards from her guard list, she goes
-     into "dystopic firewall" mode. During this mode, Alice only picks 80/443
-     nodes as guards (maybe from a separate dystopic guardlist). If those don't
-     work either (she tries POTENTIAL_GUARDS_FAILOVER_THRESHOLD of them), then Alice
-     "should make a note to herself that the network has potentially gone down"
-     as suggested by step 5.b.
-
-  So in the above idea, there are two guardlists. Guardlist GUARDS has all the
-  guards in the network, and then there is a ALL_DYSTOPIC_GUARDS guard list (which is
-  a subset of GUARDS) which is only used during "dystopic firewall" mode. I think
-  this has better load balancing and anonymity properties. But there might be
-  even better behaviors. Feel free to come up with your own and test them!
-
-  By George
-  ```
-
     0. Determine if the local network is potentially accessible.
 
        Alice should attempt to discover if the local network is up or down,
@@ -155,7 +125,8 @@ Extends: 241-suspicious-guard-turnover.txt
 
     ALL_UTOPIC_GUARDS
         All nodes listed in the most recent consensus which are marked with
-        the Guard flag - this includes ALL_DYSTOPIC_GUARDS.
+        the Guard flag - this includes ALL_DYSTOPIC_GUARDS. [XXX this depends
+        on results of simulation -ola]
 
     PRIMARY_GUARDS *
        The number of first, active, PRIMARY_GUARDS on either the
@@ -197,39 +168,20 @@ Extends: 241-suspicious-guard-turnover.txt
        weight fraction computations seems like an excellent way to
        overcomplicate the design and implementation.
 
-
 §3.2. Data Structures
 
-    ```
-    The new meeting decided to avoid disjoint the ALL_DYSTOPIC_GUARDS and ALL_UTOPIC_GUARDS
-
-    Should probably not impose a specific data structure to the
-    implementor except if strictly required. Instead maybe state the properties
-    that such a data structure needs. Maybe we can put the hashring idea in the
-    appendix?
-    ```
     POTENTIAL_UTOPIC_GUARDS
     POTENTIAL_DYSTOPIC_GUARDS
         These lists consist of a subset of ALL_UTOPIC_GUARDS and ALL_DYSTOPIC_GUARDS
         respectively.  The guards in these guardsets are the only guards to
         which we will attempt connecting.
 
-        When an OP is attempting to connect to the network, she will construct
-        hashring structure containing all potential guard nodes from both
-        ALL_UTOPIC_GUARDS and ALL_DYSTOPIC_GUARDS.  The nodes SHOULD BE inserted into
-        the structure some number of times proportional to their consensus
-        bandwidth weight. From this, the client will hash some information
-        about themselves [XXX what info should we use? —isis] and, from that,
-        choose #P number of points on the ring, where #P is
-        {UTOPIC,DYSTOPIC}_GUARDS_ATTEMPTED_THRESHOLD proportion of the
-        total number of unique relays inserted (if a duplicate is selected, it
-        is discarded).  These selected nodes comprise the
-        POTENTIAL_{UTOPIC,DYSTOPIC}_GUARDS for (first) entry guards.  (We say "first"
-        in order to distinguish between entry guards and the vanguards
-        proposed for hidden services in proposal #247.)
-
-        [Perhaps we want some better terminology for this.  Suggestions
-        welcome. —isis]
+        When an OP is attempting to connect to the network, they will generate
+        POTENTIAL_{UTOPIC,DYSTOPIC}_GUARDS by choosing a {UTOPIC,DYSTOPIC}_GUARDS_ATTEMPTED_THRESHOLD
+        proportion from ALL_{UTOPIC,DYSTOPIC}_GUARDS. For the scope of this
+        proposal, the algorithm for choosing this subset should be a random
+        selection from a list weighted by bandwidth. Every time a new consensus
+        arrives, these lists will be regenerated.
 
         Each guardset SHOULD have the property that the total sum of
         bandwidth weights for the nodes contained within it is roughly equal
@@ -237,131 +189,14 @@ Extends: 241-suspicious-guard-turnover.txt
         roughly equivalent in terms of bandwidth to another POTENTIAL_UTOPIC_GUARDS,
         but not necessarily equivalent to a POTENTIAL_DYSTOPIC_GUARDS).
 
-        For space and time efficiency reasons, implementations of the
-        POTENTIAL_*_GUARDS SHOULD support prepopulation(), update(), insert(), and
-        remove() functions.  A second data structure design consideration is
-        that the amount of "shifting" — that is, the differential between
-        constructed hashrings as nodes are inserted or removed (read: ORs
-        falling in and out of the network consensus) — SHOULD be minimised in
-        order to reduce the resources required for hashring update upon
-        receiving a newer consensus.
-        [XXX this is unclear to me - the POTENTIAL_*_GUARDS data structure has
-         nothing to do with the hashring. Is this segment talking about the
-         ALL_*_GUARDS, or descripting features of the POTENTIAL_*_GUARDS that have
-         nothing to do with the hashring? -ola]
-
-        The implementation we propose is to use a Consistent Hashring,
-        modified to dynamically allocate replications in proportion to
-        fraction of total bandwidth weight.  As with a normal Consistent
-        Hashring, replications determine the number times the relay is
-        inserted into the hashring.  The algorithm goes like this:
-
-          router          ← ⊥
-          hmac_key        ← ⊥
-          key             ← 0
-          replications    ← 0
-          bw_weight_total ← 0
-          while router ∈ GUARDS:
-           | bw_weight_total ← bw_weight_total + BW(router)
-          while router ∈ GUARDS:
-           | replications ← FLOOR(CONSENSUS_WEIGHT_FRACTION(BW(router), bw_weight_total) * T)
-           | factor ← (S / replications)
-           | while replications != 0:
-           |  | key ← (TOINT(HMAC[H](hmac_key, ID)[:X]) * replications * factor) mod S
-           |  | INSERT(key, router)
-           |  | replications <- replications - 1
-
-        where:
-
-          - BW is a function for extracting the value of an OR's `w bandwith=`
-            weight line from the consensus,
-          - GUARDSET is either ALL_UTOPIC_GUARDS or ALL_DYSTOPIC_GUARDS,
-          - CONSENSUS_WEIGHT_FRACTION is a function for computing a router's
-            consensus weight in relation to the summation of consensus weights
-            (bw_weight_total),
-          - hmac_key is a hexadecimal string containing a random key for this client
-          - T is some arbitrary number for translating a router's consensus
-            weight fraction into the number of replications,
-          - H is some collision-resistant hash digest,
-          - S is the total possible hash space of H (e.g. for SHA-1, with
-            digest sizes of 160 bits, this would be 2^160),
-          - HMAC[H] is a keyed message authentication code which utilises H,
-          - ID is a hexadecimal string containing the hash of the router's
-            public identity key,
-          - X is some (arbitrary) number of bytes to (optionally) truncate the
-            output of the HMAC to,
-          - S[:X] signifies truncation of S, some array of bytes, to a
-            sub-array containing X bytes, starting from the first byte and
-            continuing up to and including the Xth byte, such that the
-            returned sub-array is X bytes in length.
-          - INSERT is an algorithm for inserting items into the hashring,
-          - TOINT converts hexadecimal to decimal integers,
-
-        For routers A and B, where B has a little bit more bandwidth than A,
-        this gets you a hashring which looks like this:
-
-                           B-´¯¯`-BA
-                        A,`        `.
-                        /            \
-                       B|            |B
-                        \            /
-                         `.        ,´A
-                          AB--__--´B
-
-        When B disappears, A remains in the same positions:
-
-                           _-´¯¯`-_A
-                        A,`        `.
-                        /            \
-                        |            |
-                        \            /
-                         `.        ,´A
-                          A`--__--´
-
-        And similarly if A disappears:
-
-                           B-´¯¯`-B
-                         ,`        `.
-                        /            \
-                       B|            |B
-                        \            /
-                         `.        ,´
-                           B--__--´B
-
-        Thus, no "shifting" problems, and recalculation of the hashring when a
-        new consensus arrives via the update() function is much more time
-        efficient.
-
-        Alternatively, for a faster and simpler algorithm, but non-uniform
-        distribution of the keys, one could remove the "factor" and replace
-        the derivation of "key" in the algorithm above with:
-
-                key ← HMAC[H](hmac_key, ID || replications)[:X]
-
-        A reference implementation in Python is available². [1]
-
-
 §4. Footnotes
 
 ¹ "Dystopic" was chosen because those are the guards you should choose from if
   you're behind a FascistFirewall.
 
-² One tiny caveat being that the ConsistentHashring class doesn't dynamically
-  assign replication count by bandwidth weight; it gets initialised with the
-  number of replications.  However, nothing in the current implementation
-  prevents you from doing:
-      >>> h = ConsistentHashring('SuperSecureKey', replications=6)
-      >>> h.insert(A)
-      >>> h.replications = 23
-      >>> h.insert(B)
-      >>> h.replications = 42
-      >>> h.insert(C)
-
-
 §5. References
 
   [0]: https://trac.torproject.org/projects/tor/ticket/16120
-  [1]: https://gitweb.torproject.org/user/isis/bridgedb.git/tree/bridgedb/hashring.py?id=949d33e8#n481
 
 
 -*- coding: utf-8 -*-
