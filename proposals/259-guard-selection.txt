@@ -36,15 +36,15 @@ Extends: 241-suspicious-guard-turnover.txt
   consensus document.
 
   Before attempting the guard selection procedure, Alice initialises the guard
-  data structures and prepopulates the guardlist structures, including the
-  UTOPIC_GUARDLIST and DYSTOPIC_GUARDLIST (cf. §XXX).  Additionally, the
+  data structures and prepopulates the guard structures, including
+  POTENTIAL_UTOPIC_GUARDS and POTENTIAL_DYSTOPIC_GUARDS (cf. §XXX).  Additionally, the
   structures have been designed to make updates efficient both in terms of
   memory and time, in order that these and other portions of the code which
   require an up-to-date guard structure are capable of obtaining such.
 
   ```
     [The new meeting](https://lists.torproject.org/pipermail/tor-dev/2016-January/010265.html)
-    decided to avoid disjoint the DYSTOPIC_GUARDS and UTOPIC_GUARDS
+    decided to avoid disjoint the ALL_DYSTOPIC_GUARDS and ALL_UTOPIC_GUARDS
     (mainly for load balancing reasons):
 
     The original guardset should also include 80/443 bridges (shouldn't
@@ -56,15 +56,15 @@ Extends: 241-suspicious-guard-turnover.txt
 
      Alice initializes a single guard list with all the guard nodes. Then she
      does steps 1 to 4 from §2 of prop259. Then in step 5, if Alice has tried
-     more than GUARDLIST_FAILOVER_THRESHOLD guards from her guard list, she goes
+     more than POTENTIAL_GUARDS_FAILOVER_THRESHOLD guards from her guard list, she goes
      into "dystopic firewall" mode. During this mode, Alice only picks 80/443
      nodes as guards (maybe from a separate dystopic guardlist). If those don't
-     work either (she tries GUARDLIST_FAILOVER_THRESHOLD of them), then Alice
+     work either (she tries POTENTIAL_GUARDS_FAILOVER_THRESHOLD of them), then Alice
      "should make a note to herself that the network has potentially gone down"
      as suggested by step 5.b.
 
   So in the above idea, there are two guardlists. Guardlist GUARDS has all the
-  guards in the network, and then there is a DYSTOPIC_GUARDS guard list (which is
+  guards in the network, and then there is a ALL_DYSTOPIC_GUARDS guard list (which is
   a subset of GUARDS) which is only used during "dystopic firewall" mode. I think
   this has better load balancing and anonymity properties. But there might be
   even better behaviors. Feel free to come up with your own and test them!
@@ -113,27 +113,27 @@ Extends: 241-suspicious-guard-turnover.txt
 
        (Check Failover Threshold)
 
-       Take a list of all possible guard nodes from either UTOPIC_GUARDLIST or
-       DYSTOPIC_GUARDLIST depending on our network status (utopic/dystopic)
+       Take a list of all possible guard nodes from either POTENTIAL_UTOPIC_GUARDS or
+       POTENTIAL_DYSTOPIC_GUARDS depending on our network status (utopic/dystopic)
        which are not in PRIMARY_GUARDS.
 
        If we are prioritizing bandwidth, take the first one in this list.
        Otherwise, take one at random. Add the taken guard to PRIMARY_GUARDS.
 
-    5. Go through the steps 1-4 above algorithm, using the UTOPIC_GUARDLIST.
+    5. Go through the steps 1-4 above algorithm, using the POTENTIAL_UTOPIC_GUARDS.
 
-       5.a. When the GUARDLIST_FAILOVER_THRESHOLD of the UTOPIC_GUARDLIST has
+       5.a. When the POTENTIAL_GUARDS_FAILOVER_THRESHOLD of the POTENTIAL_UTOPIC_GUARDS has
             been tried (without success), Alice should begin trying steps 1-4
-            with entry guards from the DYSTOPIC_GUARDLIST as well.  Further,
-            if no nodes from UTOPIC_GUARDLIST work, and it appears that the
-            DYSTOPIC_GUARDLIST nodes are accessible, Alice should make a note
+            with entry guards from the POTENTIAL_DYSTOPIC_GUARDS as well.  Further,
+            if no nodes from POTENTIAL_UTOPIC_GUARDS work, and it appears that the
+            POTENTIAL_DYSTOPIC_GUARDS nodes are accessible, Alice should make a note
             to herself that she is possibly behind a fascist firewall.
 
-       5.b. If no nodes from either the UTOPIC_GUARDLIST or the
-            DYSTOPIC_GUARDLIST are working, Alice should make a note to
+       5.b. If no nodes from either the POTENTIAL_UTOPIC_GUARDS or the
+            POTENTIAL_DYSTOPIC_GUARDS are working, Alice should make a note to
             herself that the network has potentially gone down.  Alice should
             then schedule, at exponentially decaying times, to rerun steps 0-5.
-           
+
             [XXX Should we do step 0? Or just 1-4?  Should we retain any
             previous assumptions about FascistFirewall?  —isis]
 
@@ -147,21 +147,19 @@ Extends: 241-suspicious-guard-turnover.txt
 
     Variables marked with an asterisk (*) SHOULD be consensus parameters.
 
-    DYSTOPIC_GUARDS ¹ 
+    ALL_DYSTOPIC_GUARDS ¹
         All nodes listed in the most recent consensus which are marked with
         the Guard flag and which advertise their ORPort(s) on 80, 443, or any
         other addresses and/or ports controllable via the FirewallPorts and
         ReachableAddresses configuration options.
 
-    UTOPIC_GUARDS
+    ALL_UTOPIC_GUARDS
         All nodes listed in the most recent consensus which are marked with
-        the Guard flag and which do NOT advertise their ORPort(s) on 80, 443,
-        or any other addresses and/or ports controllable via the FirewallPorts
-        and ReachableAddresses configuration options.
+        the Guard flag - this includes ALL_DYSTOPIC_GUARDS.
 
-    PRIMARY_GUARDS * 
+    PRIMARY_GUARDS *
        The number of first, active, PRIMARY_GUARDS on either the
-       UTOPIC_GUARDLIST or DYSTOPIC_GUARDLIST as "primary". We will go to
+       POTENTIAL_UTOPIC_GUARDS or POTENTIAL_DYSTOPIC_GUARDS as "primary". We will go to
        extra lengths to ensure that we connect to one of our primary guards,
        before we fall back to a lower priority guard. By "active" we mean that
        we only consider guards that are present in the latest consensus as
@@ -169,11 +167,11 @@ Extends: 241-suspicious-guard-turnover.txt
 
     UTOPIC_GUARDS_ATTEMPTED_THRESHOLD *
     DYSTOPIC_GUARDS_ATTEMPTED_THRESHOLD *
-       These thresholds limit the amount of guards from the UTOPIC_GUARDS and
-       DYSTOPIC_GUARDS which should be partitioned into a single
-       UTOPIC_GUARDLIST or DYSTOPIC_GUARDLIST respectively.  Thus, this
-       represents the maximum percentage of each of UTOPIC_GUARDS and
-       DYSTOPIC_GUARDS respectively which we will attempt to connect to.  If
+       These thresholds limit the amount of guards from the ALL_UTOPIC_GUARDS and
+       ALL_DYSTOPIC_GUARDS which should be partitioned into a single
+       POTENTIAL_UTOPIC_GUARDS or POTENTIAL_DYSTOPIC_GUARDS respectively.  Thus, this
+       represents the maximum percentage of each of ALL_UTOPIC_GUARDS and
+       ALL_DYSTOPIC_GUARDS respectively which we will attempt to connect to.  If
        this threshold is hit we assume that we are offline, filtered, or under
        a path bias attack by a LAN adversary.
 
@@ -184,7 +182,7 @@ Extends: 241-suspicious-guard-turnover.txt
 
        This logic is not based on bandwidth, but rather on the number of
        relays which possess the Guard flag.  This is for three reasons: First,
-       because each possible *_GUARDLIST is roughly equivalent to others of
+       because each possible POTENTIAL_*_GUARDS is roughly equivalent to others of
        the same category in terms of bandwidth, it should be unlikely [XXX How
        unlikely? —isis] for an OP to select a guardset which contains less
        nodes of high bandwidth (or vice versa).  Second, the path-bias attacks
@@ -198,55 +196,59 @@ Extends: 241-suspicious-guard-turnover.txt
        redesign of the guard selection algorithm, and introducing bandwidth
        weight fraction computations seems like an excellent way to
        overcomplicate the design and implementation.
-       
+
 
 §3.2. Data Structures
 
     ```
-    The new meeting decided to avoid disjoint the DYSTOPIC_GUARDS and UTOPIC_GUARDS
+    The new meeting decided to avoid disjoint the ALL_DYSTOPIC_GUARDS and ALL_UTOPIC_GUARDS
 
     Should probably not impose a specific data structure to the
     implementor except if strictly required. Instead maybe state the properties
     that such a data structure needs. Maybe we can put the hashring idea in the
     appendix?
     ```
-    UTOPIC_GUARDLIST
-    DYSTOPIC_GUARDLIST
-        These lists consist of a subset of UTOPIC_GUARDS and DYSTOPIC_GUARDS
-        respectively.  The guards in these guardlists are the only guards to
+    POTENTIAL_UTOPIC_GUARDS
+    POTENTIAL_DYSTOPIC_GUARDS
+        These lists consist of a subset of ALL_UTOPIC_GUARDS and ALL_DYSTOPIC_GUARDS
+        respectively.  The guards in these guardsets are the only guards to
         which we will attempt connecting.
 
         When an OP is attempting to connect to the network, she will construct
         hashring structure containing all potential guard nodes from both
-        UTOPIC_GUARDS and DYSTOPIC_GUARDS.  The nodes SHOULD BE inserted into
+        ALL_UTOPIC_GUARDS and ALL_DYSTOPIC_GUARDS.  The nodes SHOULD BE inserted into
         the structure some number of times proportional to their consensus
         bandwidth weight. From this, the client will hash some information
         about themselves [XXX what info should we use? —isis] and, from that,
         choose #P number of points on the ring, where #P is
-        {UTOPIC,DYSTOPIC}_GUARDLIST_ATTEMPTED_THRESHOLD proportion of the
+        {UTOPIC,DYSTOPIC}_GUARDS_ATTEMPTED_THRESHOLD proportion of the
         total number of unique relays inserted (if a duplicate is selected, it
         is discarded).  These selected nodes comprise the
-        {UTOPIC,DYSTOPIC}_GUARDLIST for (first) entry guards.  (We say "first"
+        POTENTIAL_{UTOPIC,DYSTOPIC}_GUARDS for (first) entry guards.  (We say "first"
         in order to distinguish between entry guards and the vanguards
         proposed for hidden services in proposal #247.)
 
         [Perhaps we want some better terminology for this.  Suggestions
         welcome. —isis]
 
-        Each GUARDLIST SHOULD have the property that the total sum of
+        Each guardset SHOULD have the property that the total sum of
         bandwidth weights for the nodes contained within it is roughly equal
-        to each other guardlist of the same type (i.e. one UTOPIC_GUARDLIST is
-        roughly equivalent in terms of bandwidth to another UTOPIC_GUARDLIST,
-        but necessarily equivalent to a DYSTOPIC_GUARDLIST).
+        to each other guardset of the same type (i.e. one POTENTIAL_UTOPIC_GUARDS is
+        roughly equivalent in terms of bandwidth to another POTENTIAL_UTOPIC_GUARDS,
+        but not necessarily equivalent to a POTENTIAL_DYSTOPIC_GUARDS).
 
         For space and time efficiency reasons, implementations of the
-        GUARDLISTs SHOULD support prepopulation(), update(), insert(), and
+        POTENTIAL_*_GUARDS SHOULD support prepopulation(), update(), insert(), and
         remove() functions.  A second data structure design consideration is
         that the amount of "shifting" — that is, the differential between
         constructed hashrings as nodes are inserted or removed (read: ORs
         falling in and out of the network consensus) — SHOULD be minimised in
         order to reduce the resources required for hashring update upon
         receiving a newer consensus.
+        [XXX this is unclear to me - the POTENTIAL_*_GUARDS data structure has
+         nothing to do with the hashring. Is this segment talking about the
+         ALL_*_GUARDS, or descripting features of the POTENTIAL_*_GUARDS that have
+         nothing to do with the hashring? -ola]
 
         The implementation we propose is to use a Consistent Hashring,
         modified to dynamically allocate replications in proportion to
@@ -255,34 +257,36 @@ Extends: 241-suspicious-guard-turnover.txt
         inserted into the hashring.  The algorithm goes like this:
 
           router          ← ⊥
+          hmac_key        ← ⊥
           key             ← 0
           replications    ← 0
           bw_weight_total ← 0
-          while router ∈ GUARDLIST:
+          while router ∈ GUARDS:
            | bw_weight_total ← bw_weight_total + BW(router)
-          while router ∈ GUARDLIST:
+          while router ∈ GUARDS:
            | replications ← FLOOR(CONSENSUS_WEIGHT_FRACTION(BW(router), bw_weight_total) * T)
            | factor ← (S / replications)
            | while replications != 0:
-           |  | key ← (TOINT(HMAC(ID)[:X] * replications * factor) mod S
+           |  | key ← (TOINT(HMAC[H](hmac_key, ID)[:X]) * replications * factor) mod S
            |  | INSERT(key, router)
            |  | replications <- replications - 1
 
         where:
- 
+
           - BW is a function for extracting the value of an OR's `w bandwith=`
             weight line from the consensus,
-          - GUARDLIST is either UTOPIC_GUARDLIST or DYSTOPIC_GUARDLIST,
+          - GUARDSET is either ALL_UTOPIC_GUARDS or ALL_DYSTOPIC_GUARDS,
           - CONSENSUS_WEIGHT_FRACTION is a function for computing a router's
             consensus weight in relation to the summation of consensus weights
             (bw_weight_total),
+          - hmac_key is a hexadecimal string containing a random key for this client
           - T is some arbitrary number for translating a router's consensus
             weight fraction into the number of replications,
           - H is some collision-resistant hash digest,
           - S is the total possible hash space of H (e.g. for SHA-1, with
             digest sizes of 160 bits, this would be 2^160),
-          - HMAC is a keyed message authentication code which utilises H,
-          - ID is an hexadecimal string containing the hash of the router's
+          - HMAC[H] is a keyed message authentication code which utilises H,
+          - ID is a hexadecimal string containing the hash of the router's
             public identity key,
           - X is some (arbitrary) number of bytes to (optionally) truncate the
             output of the HMAC to,
@@ -292,7 +296,7 @@ Extends: 241-suspicious-guard-turnover.txt
             returned sub-array is X bytes in length.
           - INSERT is an algorithm for inserting items into the hashring,
           - TOINT converts hexadecimal to decimal integers,
- 
+
         For routers A and B, where B has a little bit more bandwidth than A,
         this gets you a hashring which looks like this:
 
@@ -303,7 +307,7 @@ Extends: 241-suspicious-guard-turnover.txt
                         \            /
                          `.        ,´A
                           AB--__--´B
- 
+
         When B disappears, A remains in the same positions:
 
                            _-´¯¯`-_A
@@ -313,7 +317,7 @@ Extends: 241-suspicious-guard-turnover.txt
                         \            /
                          `.        ,´A
                           A`--__--´
-                                
+
         And similarly if A disappears:
 
                            B-´¯¯`-B
@@ -323,7 +327,7 @@ Extends: 241-suspicious-guard-turnover.txt
                         \            /
                          `.        ,´
                            B--__--´B
- 
+
         Thus, no "shifting" problems, and recalculation of the hashring when a
         new consensus arrives via the update() function is much more time
         efficient.
@@ -332,7 +336,7 @@ Extends: 241-suspicious-guard-turnover.txt
         distribution of the keys, one could remove the "factor" and replace
         the derivation of "key" in the algorithm above with:
 
-                key ← HMAC(ID || replications)[:X]
+                key ← HMAC[H](hmac_key, ID || replications)[:X]
 
         A reference implementation in Python is available². [1]
 
