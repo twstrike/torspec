@@ -3,17 +3,42 @@ Title: New Guard Selection Behaviour
 Author: Isis Lovecruft, George Kadianakis
 Created: 2015-10-28
 Status: Draft
-Extends: 241-suspicious-guard-turnover.txt
-
 
 §1. Overview
 
-  In addition to the concerns regarding path bias attacks, namely that the
-  space from which guards are selected by some specific client should not
+  Tor uses entry guards to prevent an attacker who controls some
+  fraction of the network from observing a fraction of every user's
+  traffic. If users chose their entries and exits uniformly at
+  random from the list of servers every time they build a circuit,
+  then an adversary who had (k/N) of the network would deanonymize
+  F=(k/N)^2 of all circuits... and after a given user had built C
+  circuits, the attacker would see them at least once with
+  probability 1-(1-F)^C.  With large C, the attacker would get a
+  sample of every user's traffic with probability 1.
+
+  To prevent this from happening, Tor clients choose a small number
+  of guard nodes (currently 1: see proposal 236).  These guard nodes
+  are the only nodes that the client will connect to directly.  If
+  they are not compromised, the user's paths are not compromised.
+
+  But attacks remain.  Consider an attacker who can run a firewall
+  between a target user and the Tor network, and make
+  many of the guards they don't control appear to be unreachable.
+  Or consider an attacker who can identify a user's guards, and mount
+  denial-of-service attacks on them until the user picks a guard
+  that the attacker controls.
+
+  In the presence of these attacks, we can't continue to connect to
+  the Tor network unconditionally.  Doing so would eventually result
+  in the user choosing a hostile node as their guard, and losing
+  anonymity.
+
+  In addition these concerns, and to the concerns regarding path bias attacks,
+  namely that the space from which guards are selected by some specific client should not
   consist of the entirety of nodes with the Guard flag (cf. §1 of proposal
   #247), several additional concerns with respect to guard selection behaviour
-  remain.  This proposal outlines a new entry guard selection algorithm, which
-  additionally addresses the following concerns:
+  remain. This proposal outlines a new entry guard selection algorithm, which
+  addresses the following concerns:
 
     - Heuristics and algorithms for determining how and which guard(s)
       is(/are) chosen should be kept as simple and easy to understand as
@@ -38,6 +63,20 @@ Extends: 241-suspicious-guard-turnover.txt
   Before attempting the guard selection procedure, Alice initialises the guard
   data structures and prepopulates the guard structures, including
   POTENTIAL_UTOPIC_GUARDS and POTENTIAL_DYSTOPIC_GUARDS.
+
+  During this algorithm we will keep a record of all the guards we've tried to
+  connect to, connected to through in the last PERIOD days.
+  (We have connected to a guard if we authenticate its identity.)
+
+  If the number of guards we have *tried* to connect to in the last
+  PERIOD days is greater than CANDIDATE_THRESHOLD, do not attempt
+  to connect to any other guards; only attempt the ones we have
+  previously *tried* to connect to.
+
+  If the number of guards we *have* connected to in the last PERIOD
+  days is greater than CONNECTED_THRESHOLD, do not attempt to
+  connect to any other guards; only attempt ones we have already
+  *successfully* connected to.
 
     1. Ensure that PRIMARY_GUARDS contains at least N_PRIMARY_GUARDS that are
        all present in the latest consensus.
@@ -109,6 +148,12 @@ Extends: 241-suspicious-guard-turnover.txt
         The threshold of guards from POTENTIAL_UTOPIC_GUARDS we can try before giving up
         and assuming we are in a dystopic network.
 
+    PERIOD * -- 60 days
+
+    CONNECTED_THRESHOLD * -- 8
+
+    CANDIDATE_THRESHOLD * -- 20
+
     UTOPIC_GUARDS_ATTEMPTED_THRESHOLD *
     DYSTOPIC_GUARDS_ATTEMPTED_THRESHOLD *
        These thresholds limit the amount of guards from the ALL_UTOPIC_GUARDS and
@@ -162,12 +207,35 @@ Extends: 241-suspicious-guard-turnover.txt
         roughly equivalent in terms of bandwidth to another POTENTIAL_UTOPIC_GUARDS,
         but not necessarily equivalent to a POTENTIAL_DYSTOPIC_GUARDS).
 
-§4. Footnotes
+§4. Notes
+
+§4.1. What do we mean by "Stop/warn"?
+
+  By default, we should probably give warnings in most of the above
+  cases for the first version that deploys them.  We can have an
+  on/off/auto setting for whether we will build circuits at all if we're
+  in a "stopped" mode.  Default should be auto, meaning off for now.
+
+  The warning needs to be carefully chosen, and suggest a workaround
+  better than "get a better network" or "clear your state file".
+
+§4.2. Future work
+
+  We need to make this play nicely with mobility.  When a user has
+  three guards on port 9001 and they move to a firewall that only
+  allows 80/443, we'd prefer that they not simply grind to a halt.  If
+  nodes are configured to stop when too many of their guards have gone
+  away, this will confuse them.
+
+  If people need to turn FascistFirewall on and off, great.  But if
+  they just clear their state file as a workaround, that's not so good.
+
+§5. Footnotes
 
 ¹ "Dystopic" was chosen because those are the guards you should choose from if
   you're behind a FascistFirewall.
 
-§5. References
+§6. References
 
 
 -*- coding: utf-8 -*-
