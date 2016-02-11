@@ -1,6 +1,6 @@
 Filename: 259-guard-selection.txt
 Title: New Guard Selection Behaviour
-Author: Isis Lovecruft, George Kadianakis
+Author: Isis Lovecruft, George Kadianakis, [Ola Bini]
 Created: 2015-10-28
 Status: Draft
 
@@ -16,10 +16,10 @@ Status: Draft
   probability 1-(1-F)^C.  With large C, the attacker would get a
   sample of every user's traffic with probability 1.
 
-  To prevent this from happening, Tor clients choose a small number
-  of guard nodes (currently 1: see proposal 236).  These guard nodes
-  are the only nodes that the client will connect to directly.  If
-  they are not compromised, the user's paths are not compromised.
+  To prevent this from happening, Tor clients choose a small number of
+  guard nodes (currently 3).  These guard nodes are the only nodes
+  that the client will connect to directly.  If they are not
+  compromised, the user's paths are not compromised.
 
   But attacks remain.  Consider an attacker who can run a firewall
   between a target user and the Tor network, and make
@@ -33,181 +33,315 @@ Status: Draft
   in the user choosing a hostile node as their guard, and losing
   anonymity.
 
-  In addition these concerns, and to the concerns regarding path bias attacks,
-  namely that the space from which guards are selected by some specific client should not
-  consist of the entirety of nodes with the Guard flag (cf. §1 of proposal
-  #247), several additional concerns with respect to guard selection behaviour
-  remain. This proposal outlines a new entry guard selection algorithm, which
+  In addition these concerns, and to the concerns regarding path bias
+  attacks, namely that the space from which guards are selected by
+  some specific client should not consist of the entirety of nodes
+  with the Guard flag (cf. §1 of proposal #247), several additional
+  concerns with respect to guard selection behaviour remain. This
+  proposal outlines a new entry guard selection algorithm, which
   addresses the following concerns:
 
     - Heuristics and algorithms for determining how and which guard(s)
-      is(/are) chosen should be kept as simple and easy to understand as
-      possible.
+      is(/are) chosen should be kept as simple and easy to understand
+      as possible.
 
-    - Clients in censored regions or who are behind a fascist firewall who
-      connect to the Tor network should not experience any significant
-      disadvantage in terms of reachability or usability.
+    - Clients in censored regions or who are behind a fascist firewall
+      who connect to the Tor network should not experience any
+      significant disadvantage in terms of reachability or usability.
 
-    - Tor should make a best attempt at discovering the most appropriate
-      behaviour, with as little user input and configuration as possible.
+    - Tor should make a best attempt at discovering the most
+      appropriate behaviour, with as little user input and
+      configuration as possible.
 
 
 §2. Design
 
-  Alice, an OP attempting to connect to the Tor network, should undertake the
-  following steps to determine information about the local network and to
-  select (some) appropriate entry guards.  In the following scenario, it is
-  assumed that Alice has already obtained a recent, valid, and verifiable
-  consensus document.
+  Alice, an OP attempting to connect to the Tor network, should
+  undertake the following steps to determine information about the
+  local network and to select (some) appropriate entry guards.  In the
+  following scenario, it is assumed that Alice has already obtained a
+  recent, valid, and verifiable consensus document.
 
-  Before attempting the guard selection procedure, Alice initialises the guard
-  data structures and prepopulates the guard structures, including
-  POTENTIAL_UTOPIC_GUARDS and POTENTIAL_DYSTOPIC_GUARDS.
+  The algorithm is divided into three components such that the full
+  algorithm is implemented by first invoking START, then repeatedly
+  calling NEXT and finally calling END. Several components of NEXT can
+  be invoked asynchronously.
 
-  During this algorithm we will keep a record of all the guards we've tried to
-  connect to, connected to through in the last PERIOD days.
-  (We have connected to a guard if we authenticate its identity.)
+  This algorithm keeps track of the unreachability status for guards
+  in state private to the algorithm - this is re-initialized every time
+  START is called.
 
-  If the number of guards we have *tried* to connect to in the last
-  PERIOD days is greater than CANDIDATE_THRESHOLD, do not attempt
-  to connect to any other guards; only attempt the ones we have
-  previously *tried* to connect to.
+  The algorithm expects several arguments to guide its behavior. These
+  will be defined in §2.1.
 
-  If the number of guards we *have* connected to in the last PERIOD
-  days is greater than CONNECTED_THRESHOLD, do not attempt to
-  connect to any other guards; only attempt ones we have already
-  *successfully* connected to.
+  The goal of this algorithm is to strongly prefer connecting to the
+  same guards we have connected to before, while also trying to detect
+  conditions such as a network outage or a network environment that
+  blocks most ports. The way it does this is by keeping track of how
+  many guards we have exposed ourselves to, and if we have connected
+  to too many we will fall back to only retrying the ones we have
+  already tried. There are also several other fallback mechanisms in
+  this design.
 
-    1. Ensure that PRIMARY_GUARDS contains at least N_PRIMARY_GUARDS that are
-       all present in the latest consensus.
 
-    2. For each entry in PRIMARY_GUARDS that is not marked as offline, test whether
-       it can be reached. If not, mark it as offline. Otherwise return it and finish the algorithm.
+§2.1. The START algorithm
 
-    3. If no entry in PRIMARY_GUARDS is online, for each entry in PRIMARY_GUARDS
-       that haven't been probed for the last 20 minutes clear the offline mark
-       and repeat step 2 and 3 until we have either returned a guard or have no
-       more guards in PRIMARY_GUARDS to try.
+  In order to start choosing an entry guard, use the START
+  algorithm. This takes three arguments that can be used to fine tune
+  the workings:
 
-    4. If at least GUARDS_MAX_ADD_THRESHOLD entry guards have been added to
-       PRIMARY_GUARDS within GUARDS_MAX_ADD_THRESHOLD_TIME, return failure from the
-       algorithm.
+  USED_GUARDS
+      This is a list that contains all the guards that have been used
+      before by this client. We will prioritize using guards from this
+      list in order to minimize our exposure. The list is expected to
+      be sorted based on priority, where the first entry will have the
+      highest priority.
 
-       If the POTENTIAL_GUARDS_FAILOVER_THRESHOLD of the POTENTIAL_UTOPIC_GUARDS has
-       been tried (without success), Alice should switch to trying steps 1-4 with entry
-       guards from the POTENTIAL_DYSTOPIC_GUARDS as well. Further, if no nodes from
-       POTENTIAL_UTOPIC_GUARDS work, and it appears that the POTENTIAL_DYSTOPIC_GUARDS
-       nodes are accessible, Alice should make a note to herself that she is possibly
-       behind a fascist firewall.
+  EXCLUDE_NODES
+      A set of nodes that we should not consider using us a guard.
 
-       Otherwise, choose a new guard from POTENTIAL_*_GUARDS using the same
-       mechanism used to initially populate PRIMARY_GUARDS, add it to PRIMARY_GUARDS
-       and redo the algorithm from step 2.
+  N_PRIMARY_GUARDS
+      The number of guards we should consider our primary
+      guards. These guards will be retried more frequently and will
+      take precedence in most situations. By default the primary
+      guards will be the first N_PRIMARY_GUARDS guards from USED_GUARDS.
 
-    5. If no nodes from either the POTENTIAL_UTOPIC_GUARDS or the
-       POTENTIAL_DYSTOPIC_GUARDS are working, Alice should signal failure
-       to the caller, indicating that the network is potentially down. She should also
-       go back over all guards marked as offline in this run and clear the offline status
-       that mark.
+  DIR
+      If this argument is set, we should only consider guards that can
+      be directory guards. If not set, we will consider all guards.
 
-§3. New Data Structures, Consensus Parameters, & Configurable Variables
+  The primary work of START is to initialize the different states we
+  will need. These are:
 
-§3.1. Consensus Parameters & Configurable Variables
+  GUARDS
+      This is a set of all guards from the consensus, without
+      EXCLUDE_NODES and potentially filtered if DIR is set.
 
-    Variables marked with an asterisk (*) SHOULD be consensus parameters.
+  UTOPIC_GUARDS
+      This is a set of all guards to use under utopic conditions. This
+      set will be initialized to be the same as GUARDS.
 
-    ALL_DYSTOPIC_GUARDS ¹
-        All nodes listed in the most recent consensus which are marked with
-        the Guard flag and which advertise their ORPort(s) on 80, 443, or any
-        other addresses and/or ports controllable via the FirewallPorts and
-        ReachableAddresses configuration options.
+  DYSTOPIC_GUARDS
+      This is a set of all guards to use under dystopic conditions
+      (usually when we are subject to a firewall that restricts the
+      ports we can connect to). This set will be initialized to be the
+      subset of GUARDS that listen to ports that are allowed by
+      dystopic conditions.
 
-    ALL_UTOPIC_GUARDS
-        All nodes listed in the most recent consensus which are marked with
-        the Guard flag - this includes ALL_DYSTOPIC_GUARDS. [XXX this depends
-        on results of simulation -ola]
+  REMAINING_UTOPIC_GUARDS
+      This is a running set of the utopic guards we have not yet tried
+      to connect to. It should be initialized to be UTOPIC_GUARDS
+      without USED_GUARDS.
 
-    N_PRIMARY_GUARDS *
-       The number of first, active guards on either the
-       POTENTIAL_UTOPIC_GUARDS or POTENTIAL_DYSTOPIC_GUARDS to add to PRIMARY_GUARDS.
-       We will go to  extra lengths to ensure that we connect to one of our primary guards,
-       before we fall back to a lower priority guard. By "active" we mean that
-       we only consider guards that are present in the latest consensus as
-       primary.
+  REMAINING_DYSTOPIC_GUARDS
+      This is a running set of the dystopic guards we have not yet tried
+      to connect to. It should be initialized to be DYSTOPIC_GUARDS
+      without USED_GUARDS.
 
-    PRIMARY_GUARDS
-        A list of N_PRIMARY_GUARDS guards that have been taken from POTENTIAL_*_GUARDS.
-        These should be chosen as the guards with highest bandwidth that are still in the
-        latest consensus.
+  TRIED_GUARDS
+      This set keeps track of all utopic guards we have tried connecting
+      to. This should be initialized to the empty set.
 
-    GUARDS_MAX_ADD_THRESHOLD *
-        The maximum number of guards to add to PRIMARY_GUARDS within a specific time
-        period, in this case GUARDS_MAX_ADD_THRESHOLD_TIME.
+  TRIED_DYSTOPIC_GUARDS
+      This set keeps track of all utopic guards we have tried connecting
+      to. This should be initialized to the empty set.
 
-    POTENTIAL_GUARDS_FAILOVER_THRESHOLD *
-        The threshold of guards from POTENTIAL_UTOPIC_GUARDS we can try before giving up
-        and assuming we are in a dystopic network.
+  STATE
+      A variable that keeps track of which state in the state
+      machine we are currently in. It should be initialized to
+      STATE_PRIMARY_GUARDS.
 
-    PERIOD * -- 60 days
+  PRIMARY_GUARDS
+      This list keeps track of our primary guards. These are guards
+      that we will prioritize when trying to connect, and will also
+      retry more often in case of failure with other guards.
+      It should be initialized by using calling algorithm
+      NEXT_PRIMARY_GUARD repeatedly until PRIMARY_GUARDS contains
+      N_PRIMARY_GUARDS elements.
 
-    CONNECTED_THRESHOLD * -- 8
 
-    CANDIDATE_THRESHOLD * -- 20
+§2.2. The NEXT algorithm
 
-    UTOPIC_GUARDS_ATTEMPTED_THRESHOLD *
-    DYSTOPIC_GUARDS_ATTEMPTED_THRESHOLD *
-       These thresholds limit the amount of guards from the ALL_UTOPIC_GUARDS and
-       ALL_DYSTOPIC_GUARDS which should be partitioned into a single
-       POTENTIAL_UTOPIC_GUARDS or POTENTIAL_DYSTOPIC_GUARDS respectively.  Thus, this
-       represents the maximum percentage of each of ALL_UTOPIC_GUARDS and
-       ALL_DYSTOPIC_GUARDS respectively which we will attempt to connect to.  If
-       this threshold is hit we assume that we are offline, filtered, or under
-       a path bias attack by a LAN adversary.
+  The NEXT algorithm is composed of several different possibly flows. The
+  first one is a simple state machine that can transfer between four
+  different states. Every time NEXT is invoked, it will resume at the
+  state where it left off previously. In the course of selecting an
+  entry guard, a new consensus can arrive. When that happens we need
+  to update the data structures used, but nothing else should change.
 
-       There are currently 1600 guards in the network.  We allow the user to
-       attempt 80 of them before failing (5% of the guards).  With regards to
-       filternet reachability, there are 450 guards on ports 80 or 443, so the
-       probability of picking such a guard here should be high.
+  Before jumping in to the state machine, we should first check if it
+  was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried
+  any of the PRIMARY_GUARDS. If this is the case, and we are not in
+  STATE_PRIMARY_GUARDS, we should save the previous state and set the
+  state to STATE_PRIMARY_GUARDS.
 
-       This logic is not based on bandwidth, but rather on the number of
-       relays which possess the Guard flag.  This is for three reasons: First,
-       because each possible POTENTIAL_*_GUARDS is roughly equivalent to others of
-       the same category in terms of bandwidth, it should be unlikely [XXX How
-       unlikely? —isis] for an OP to select a guardset which contains less
-       nodes of high bandwidth (or vice versa).  Second, the path-bias attacks
-       detailed in proposal #241 are best mitigated through limiting the
-       number of possible entry guards which an OP might attempt to use, and
-       varying the level of security an OP can expect based solely upon the
-       fact that the OP picked a higher number of low-bandwidth entry guards
-       rather than a lower number of high-bandwidth entry guards seems like a
-       rather cruel and unusual punishment in addition to the misfortune of
-       already having slower entry guards.  Third, we favour simplicity in the
-       redesign of the guard selection algorithm, and introducing bandwidth
-       weight fraction computations seems like an excellent way to
-       overcomplicate the design and implementation.
 
-§3.2. Data Structures
+§2.2.1. The STATE_PRIMARY_GUARDS state
 
-    POTENTIAL_UTOPIC_GUARDS
-    POTENTIAL_DYSTOPIC_GUARDS
-        These lists consist of a subset of ALL_UTOPIC_GUARDS and ALL_DYSTOPIC_GUARDS
-        respectively.  The guards in these guardsets are the only guards to
-        which we will attempt connecting.
+  Return each entry in PRIMARY_GUARDS in turn. For each entry, if it
+  was not possible to connect to it, mark the entry as unreachable and
+  add it to TRIED_GUARDS.
 
-        When an OP is attempting to connect to the network, they will generate
-        POTENTIAL_{UTOPIC,DYSTOPIC}_GUARDS by choosing a {UTOPIC,DYSTOPIC}_GUARDS_ATTEMPTED_THRESHOLD
-        proportion from ALL_{UTOPIC,DYSTOPIC}_GUARDS. For the scope of this
-        proposal, the algorithm for choosing this subset should be a random
-        selection from a list weighted by bandwidth. Every time a new consensus
-        arrives, these lists will be regenerated.
+  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as an argument.
 
-        Each guardset SHOULD have the property that the total sum of
-        bandwidth weights for the nodes contained within it is roughly equal
-        to each other guardset of the same type (i.e. one POTENTIAL_UTOPIC_GUARDS is
-        roughly equivalent in terms of bandwidth to another POTENTIAL_UTOPIC_GUARDS,
-        but not necessarily equivalent to a POTENTIAL_DYSTOPIC_GUARDS).
+  If all entries have been tried, restore the previous state and go
+  there. If there is no previous state, transition to STATE_TRY_UTOPIC.
 
-§4. Future work
+
+§2.2.2. The STATE_TRY_UTOPIC state
+
+  In order to give guards that have been marked as unreachable a
+  chance to come back, add all entries in TRIED_GUARDS that were
+  marked as unreachable more than GUARDS_RETRY_TIME minutes ago back
+  to REMAINING_UTOPIC_GUARDS.
+
+  Return each entry in USED_GUARDS that is not in PRIMARY_GUARDS in
+  turn. For each entry, if it was not possible to connect to it, mark
+  the entry as unreachable and add it to TRIED_GUARDS.
+
+  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as the argument.
+
+  Invoke CHECK_FAILOVER with TRIED_GUARDS, UTOPIC_GUARDS and
+  STATE_TRY_DYSTOPIC as arguments.
+
+  Return each entry from REMAINING_UTOPIC_GUARDS using
+  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
+  to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
+  unreachable and add it to TRIED_GUARDS.
+
+  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as the argument.
+
+  Invoke CHECK_FAILOVER with TRIED_GUARDS, UTOPIC_GUARDS and
+  STATE_TRY_DYSTOPIC as arguments.
+
+
+§2.2.3. The STATE_TRY_DYSTOPIC state
+
+  In order to give guards that have been marked as unreachable a
+  chance to come back, add all entries in TRIED_DYSTOPIC_GUARDS that were
+  marked as unreachable more than GUARDS_RETRY_TIME minutes ago back
+  to REMAINING_DYSTOPIC_GUARDS.
+
+  Return each dystopic entry in USED_GUARDS that is not in PRIMARY_GUARDS in
+  turn. For each entry, if it was not possible to connect to it, mark
+  the entry as unreachable and add it to TRIED_DYSTOPIC_GUARDS.
+
+  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS unioned with
+  TRIED_DYSTOPIC_GUARDS as the argument.
+
+  Invoke CHECK_FAILOVER with TRIED_DYSTOPIC_GUARDS, DYSTOPIC_GUARDS and
+  STATE_ONLY_RETRY as arguments. If the failover check fails, mark all
+  guards in PRIMARY_GUARDS, TRIED_GUARDS and TRIED_DYSTOPIC_GUARDS as
+  not unreachable.
+
+  Return each entry from REMAINING_DYSTOPIC_GUARDS using
+  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
+  to it, remove the entry from REMAINING_DYSTOPIC_GUARDS, mark it as
+  unreachable and add it to TRIED_DYSTOPIC_GUARDS.
+
+  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS unioned with
+  TRIED_DYSTOPIC_GUARDS as the argument.
+
+  Invoke CHECK_FAILOVER with TRIED_DYSTOPIC_GUARDS, DYSTOPIC_GUARDS and
+  STATE_ONLY_RETRY as arguments. If the failover check fails, mark all
+  guards in PRIMARY_GUARDS, TRIED_GUARDS and TRIED_DYSTOPIC_GUARDS as
+  not unreachable.
+
+
+§2.2.4. The STATE_RETRY_ONLY state
+
+  Return each entry from the union of TRIED_GUARDS and
+  TRIED_DYSTOPIC_GUARDS with priority to the ones that are we haven't
+  tried recently. For each entry, if it was not possible to connect
+  to it, mark the entry as unreachable again.
+
+
+§2.2.5. ON_NEW_CONSENSUS
+
+  First, ensure that all guard profiles are updated with information
+  about whether they were in the newest consensus or not. If not, the
+  guard is considered bad.
+
+  If any PRIMARY_GUARDS have become bad, remove the guard from
+  PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
+  N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
+
+  If any guards in USED_GUARDS have switch from being bad to being
+  non-bad, add it back in the place it should have been in
+  PRIMARY_GUARDS if it had been non-bad when populating
+  PRIMARY_GUARDS. If this results in PRIMARY_GUARDS being larger than
+  N_PRIMARY_GUARDS, truncate the list to be N_PRIMARY_GUARDS entries
+  long.
+
+
+§2.3. The END algorithm
+
+  The goal of this algorithm is simply to make sure that we keep track
+  of successful connections made. This algorithm should be invoked
+  with the guard that was used to correctly set up a circuit.
+
+  Once invoked, this algorithm will mark the guard as used, and make
+  sure it is in USED_GUARDS.
+
+
+§2.4. Helper algorithms
+
+  These algorithms are used in the above algorithms, but have been
+  separated out here in order to make the flow clearer.
+
+  NEXT_PRIMARY_GUARD
+      - Return the first entry from USED_GUARDS that is not in
+        PRIMARY_GUARDS, and that is in the most recent consensus
+      - If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
+        REMAINING_UTOPIC_GUARDS as the argument
+
+  NEXT_BY_BANDWIDTH
+      - Takes G as an argument, which should be a set of guards to
+        choose from.
+      - Return a randomly select element from G, weighted by bandwidth.
+
+  CHECK_TRIED_THRESHOLD
+      - Takes G as an argument, which should be a set of guards that
+        have been tried.
+      - If the number of entries in G that were tried within
+        GUARDS_TRY_THRESHOLD_TIME is larger than GUARDS_TRY_THRESHOLD,
+        transition to STATE_RETRY_ONLY. We do this in order to ensure
+        that we not expose ourselves to a large number of guards in a
+        short amount of time.
+
+  CHECK_FAILOVER
+      - Takes three arguments, TG which should be a set of guards that
+        have been tried, G which is the set of all guards that could
+        have been tried, and S which is a state to transfer to.
+      - If the number of entries in TG is larger than a
+        GUARDS_FAILOVER_THRESHOLD proportion of G, transition to
+        state S.
+
+
+§3. Consensus Parameters, & Configurable Variables
+
+TODO
+
+  This proposal introduces several new parameters that ideally should
+  be set in the consensus but that should also be possible to
+  set or override in the client configuration file. Some of these have
+  proposed values, but for others more simulation and trial needs to
+  happen.
+
+PRIMARY_GUARDS_RETRY_INTERVAL
+GUARDS_TRY_THRESHOLD_TIME
+GUARDS_TRY_THRESHOLD
+GUARDS_RETRY_TIME
+GUARDS_FAILOVER_THRESHOLD
+
+
+§4.  security properties etc other things
+
+TODO
+
+§5. Future work
+
+TODO
 
   We need to make this play nicely with mobility.  When a user has
   three guards on port 9001 and they move to a firewall that only
@@ -217,13 +351,6 @@ Status: Draft
 
   If people need to turn FascistFirewall on and off, great.  But if
   they just clear their state file as a workaround, that's not so good.
-
-§5. Footnotes
-
-¹ "Dystopic" was chosen because those are the guards you should choose from if
-  you're behind a FascistFirewall.
-
-§6. References
 
 
 -*- coding: utf-8 -*-
