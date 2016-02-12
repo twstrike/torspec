@@ -143,7 +143,7 @@ Status: Draft
       to. This should be initialized to the empty set.
 
   TRIED_DYSTOPIC_GUARDS
-      This set keeps track of all utopic guards we have tried connecting
+      This set keeps track of all dystopic guards we have tried connecting
       to. This should be initialized to the empty set.
 
   STATE
@@ -155,7 +155,7 @@ Status: Draft
       This list keeps track of our primary guards. These are guards
       that we will prioritize when trying to connect, and will also
       retry more often in case of failure with other guards.
-      It should be initialized by using calling algorithm
+      It should be initialized by calling algorithm
       NEXT_PRIMARY_GUARD repeatedly until PRIMARY_GUARDS contains
       N_PRIMARY_GUARDS elements.
 
