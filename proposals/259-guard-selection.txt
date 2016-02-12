@@ -251,7 +251,7 @@ Status: Draft
 §2.2.4. The STATE_RETRY_ONLY state
 
   Return each entry from the union of TRIED_GUARDS and
-  TRIED_DYSTOPIC_GUARDS with priority to the ones that are we haven't
+  TRIED_DYSTOPIC_GUARDS with priority to the ones we haven't
   tried recently. For each entry, if it was not possible to connect
   to it, mark the entry as unreachable again.
 
