@@ -317,10 +317,7 @@ Status: Draft
         GUARDS_FAILOVER_THRESHOLD proportion of G, transition to
         state S.
 
-
 §3. Consensus Parameters, & Configurable Variables
-
-TODO
 
   This proposal introduces several new parameters that ideally should
   be set in the consensus but that should also be possible to
@@ -328,11 +325,45 @@ TODO
   proposed values, but for others more simulation and trial needs to
   happen.
 
-PRIMARY_GUARDS_RETRY_INTERVAL
-GUARDS_TRY_THRESHOLD_TIME
-GUARDS_TRY_THRESHOLD
-GUARDS_RETRY_TIME
-GUARDS_FAILOVER_THRESHOLD
+  PRIMARY_GUARDS_RETRY_INTERVAL
+      In order to make it more likely we connect to a primary guard,
+      we would like to retry the primary guards more often than other
+      types of guards. This parameter controls how many minutes should
+      pass before we consider retrying primary guards again. The
+      proposed value is 3.
+
+  GUARDS_TRY_THRESHOLD_TIME
+      We want to make sure we are not connecting to too many guards in
+      too short amount of time. This parameter controls how many
+      minutes this window of time should be. Proposed value is 120.
+
+  GUARDS_TRY_THRESHOLD
+      This parameter controls the maximum fraction of guards we should
+      try connecting to within GUARDS_TRY_THRESHOLD_TIME. This is a
+      fraction that should be taken against the total number of guards
+      in the consensus. If we assume the current consensus contains
+      1900 guards, a value of 0.03 gives us a maximum of 57 guards to
+      try connecting to. Proposed value is 0.03.
+
+  GUARDS_RETRY_TIME
+      In the normal course of selecting guards, we want to continue
+      retrying unreachable guards in case they have become
+      reachable. This parameter controls the minimum amount of minutes
+      before we should start consider guards for connecting
+      again. Proposed value is 20.
+
+  GUARDS_FAILOVER_THRESHOLD
+      In order to allow us to recognize dystopic situations or a
+      completely unreachable network, we would like to avoid
+      connecting to too many guards before switching modes. This
+      parameter, expressed as a fraction, determines the number of
+      guards we should try connecting to before switching from utopic
+      to dystopic mode, or from dystopic to offline mode. If we assume
+      there are 1900 utopic guards and of them there are 500 dystopic
+      guards, a setting of 0.02 means we will try to connect to 38
+      utopic guards before switching to dystopic mode. At that point
+      we will try 10 more dystopic guards before we conclude that the
+      network is down. Proposed value is 0.02.
 
 
 §4.  security properties etc other things
@@ -352,5 +383,8 @@ TODO
   If people need to turn FascistFirewall on and off, great.  But if
   they just clear their state file as a workaround, that's not so good.
 
+§A. Appendix: An example usage
+
+TODO
 
 -*- coding: utf-8 -*-
