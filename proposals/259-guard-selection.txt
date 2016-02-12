@@ -369,6 +369,7 @@ Status: Draft
 [XXX: should we remember we are potentially dystopic, and lower the
 utopic threshold in that case next time we run the algorithm?]
 
+[XXX: what risks are we subjected to by not remembering previous choices? Can this lead to cycling again?]
 
 §4.  Security properties and behavior under various conditions
 
