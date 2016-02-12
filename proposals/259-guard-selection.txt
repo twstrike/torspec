@@ -98,7 +98,7 @@ Status: Draft
       highest priority.
 
   EXCLUDE_NODES
-      A set of nodes that we should not consider using us a guard.
+      A set of nodes that we should not consider using as a guard.
 
   N_PRIMARY_GUARDS
       The number of guards we should consider our primary
