@@ -87,7 +87,7 @@ Status: Draft
 §2.1. The START algorithm
 
   In order to start choosing an entry guard, use the START
-  algorithm. This takes three arguments that can be used to fine tune
+  algorithm. This takes four arguments that can be used to fine tune
   the workings:
 
   USED_GUARDS
@@ -366,25 +366,53 @@ Status: Draft
       network is down. Proposed value is 0.02.
 
 
-§4.  security properties etc other things
+[XXX: should we remember we are potentially dystopic, and lower the
+utopic threshold in that case next time we run the algorithm?]
 
-TODO
 
-§5. Future work
+§4.  Security properties and behavior under various conditions
 
-TODO
+  Under normal conditions, this algorithm will allow us to quickly
+  connect and use guards we have used before with high likelihood of
+  working. Assuming the first primary guard is reachable and in the
+  consensus, this algorithm will deterministically always return that
+  guard.
 
-  We need to make this play nicely with mobility.  When a user has
-  three guards on port 9001 and they move to a firewall that only
-  allows 80/443, we'd prefer that they not simply grind to a halt.  If
-  nodes are configured to stop when too many of their guards have gone
-  away, this will confuse them.
+  Under dystopic conditions (when a firewall is in place that blocks
+  all ports except for potentially port 80 and 443), this algorithm
+  will try to connect to 2% of all guards before switching mode to try
+  dystopic guards. Currently, that means trying to connect to ca 40
+  guards before getting a succesful connection. If we assume a
+  connection try will take maximum 10 seconds, that means it will take
+  up to 6 minutes to get a working connection.
 
-  If people need to turn FascistFirewall on and off, great.  But if
-  they just clear their state file as a workaround, that's not so good.
+  When the network is completely down, we will try to connect to 2% of
+  all guards plus 2% of all dystopic guards before realizing we are
+  down. This means ca 50 guards tried.
+
+  In terms of exposure, we will connect to a maximum of 2% of all
+  guards plus 2% of all dystopic guards, or 3% of all guards,
+  whichever is lower. If N is the number of guards, and k is the
+  number of guards an attacker controls, that means an attacker would
+  have a probability of 1-(1-(k/N)^2)^(N * 0.03) to have one of their
+  guards selected before we fall back. In real terms, this means an
+  attacker would need to control over 10% of all guards in order to
+  have a larger than 50% chance of controling a guard for any given client.
+
 
 §A. Appendix: An example usage
 
-TODO
+  In order to clarify how this algorithm is supposed to be used, this
+  pseudo code illustrates the building of a circuit:
+
+    OPEN_CIRCUIT:
+      context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards, [], 3, false)
+
+      while True:
+        entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
+        circuit = buildCircuitWith(entryGuard)
+        if circuit:
+          ALGO_CHOOSE_ENTRY_GUARD_END(context, entryGuard)
+          return circuit
 
 -*- coding: utf-8 -*-
