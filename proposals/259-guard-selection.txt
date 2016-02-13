@@ -375,15 +375,15 @@ utopic threshold in that case next time we run the algorithm?]
 
   Under dystopic conditions (when a firewall is in place that blocks
   all ports except for potentially port 80 and 443), this algorithm
-  will try to connect to 2% of all guards before switching mode to try
-  dystopic guards. Currently, that means trying to connect to ca 40
-  guards before getting a succesful connection. If we assume a
+  will try to connect to 2% of all guards before switching modes to try
+  dystopic guards. Currently, that means trying to connect to circa 40
+  guards before getting a successful connection. If we assume a
   connection try will take maximum 10 seconds, that means it will take
   up to 6 minutes to get a working connection.
 
   When the network is completely down, we will try to connect to 2% of
   all guards plus 2% of all dystopic guards before realizing we are
-  down. This means ca 50 guards tried.
+  down. This means circa 50 guards tried.
 
   In terms of exposure, we will connect to a maximum of 2% of all
   guards plus 2% of all dystopic guards, or 3% of all guards,
@@ -392,7 +392,7 @@ utopic threshold in that case next time we run the algorithm?]
   have a probability of 1-(1-(k/N)^2)^(N * 0.03) to have one of their
   guards selected before we fall back. In real terms, this means an
   attacker would need to control over 10% of all guards in order to
-  have a larger than 50% chance of controling a guard for any given client.
+  have a larger than 50% chance of controlling a guard for any given client.
 
 
 §A. Appendix: An example usage
