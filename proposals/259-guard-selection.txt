@@ -203,7 +203,7 @@ Status: Draft
   to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
   unreachable and add it to TRIED_GUARDS.
 
-  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as the argument.
+  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as the argument again.
 
   Invoke CHECK_FAILOVER with TRIED_GUARDS, UTOPIC_GUARDS and
   STATE_TRY_DYSTOPIC as arguments.
