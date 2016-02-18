@@ -285,9 +285,11 @@ Status: Draft
 
   NEXT_PRIMARY_GUARD
       - Return the first entry from USED_GUARDS that is not in
-        PRIMARY_GUARDS, and that is in the most recent consensus
+        PRIMARY_GUARDS, and that is in the most recent consensus.
       - If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
-        REMAINING_UTOPIC_GUARDS as the argument
+        REMAINING_UTOPIC_GUARDS as the argument.
+	[XXX Should the chosen guard be removed from REMAININ_UTOPIC_GUARDS?]
+	[XXX Don't we care if is bad or not in most recent consensus?]
 
   NEXT_BY_BANDWIDTH
       - Takes G as an argument, which should be a set of guards to
