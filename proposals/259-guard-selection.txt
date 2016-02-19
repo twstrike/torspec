@@ -173,8 +173,9 @@ Status: Draft
 §2.2.1. The STATE_PRIMARY_GUARDS state
 
   Return each entry in PRIMARY_GUARDS in turn. For each entry, if it
-  was not possible to connect to it, mark the entry as unreachable and
-  add it to TRIED_GUARDS.
+  was not possible to connect to it, mark the entry as unreachable,
+  add it to TRIED_GUARDS and ignore it. If it was possible to connect
+  return that entry and be done.
 
   Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as an argument.
 
