@@ -291,6 +291,10 @@ Status: Draft
         REMAINING_UTOPIC_GUARDS as the argument.
 	[XXX Should the chosen guard be removed from REMAININ_UTOPIC_GUARDS?]
 	[XXX Don't we care if is bad or not in most recent consensus?]
+  [XXX The spec does not care if this "next" node is known to be unreachable, and
+       we pick it anyways. We should not pick unreachable nodes.]
+  [XXX The spec does not care if this node from REMAININ_UTOPIC_GUARDS is already in
+       PRIMARY_GUARDS, does it? We should.]
 
   NEXT_BY_BANDWIDTH
       - Takes G as an argument, which should be a set of guards to
