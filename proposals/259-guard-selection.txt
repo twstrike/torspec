@@ -176,6 +176,10 @@ Status: Draft
   was not possible to connect to it, mark the entry as unreachable,
   add it to TRIED_GUARDS and ignore it. If it was possible to connect
   return that entry and be done.
+  [XXX defining "was not possible to connect" as "entry is not live" according
+       to current definition of "live entry guard" in tor source code, seems
+       to improve success rate on the flaky network scenario.
+       See: https://github.com/twstrike/tor_guardsim/issues/1#issuecomment-187374942]
 
   Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as an argument.
 
