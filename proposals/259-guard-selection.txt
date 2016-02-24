@@ -257,7 +257,9 @@ Status: Draft
   Return each entry from the union of TRIED_GUARDS and
   TRIED_DYSTOPIC_GUARDS with priority to the ones we haven't
   tried recently. For each entry, if it was not possible to connect
-  to it, mark the entry as unreachable again.
+  to it, mark the entry as unreachable again. In the other hand, if
+  it was possible to connect, close this connection and move to
+  STATE_PRIMARY_GUARDS.
 
 
 §2.2.5. ON_NEW_CONSENSUS
