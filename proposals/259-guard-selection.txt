@@ -425,10 +425,12 @@ utopic threshold in that case next time we run the algorithm?]
 
       while True:
         entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
-	if entryGuard.isDiscardable() continue
         circuit = buildCircuitWith(entryGuard)
         if circuit:
-          ALGO_CHOOSE_ENTRY_GUARD_END(context, entryGuard)
-          return circuit
+	  if entryGuard.isDiscardable():
+	    continue
+	  else:
+            ALGO_CHOOSE_ENTRY_GUARD_END(context, entryGuard)
+            return circuit
 
 -*- coding: utf-8 -*-
