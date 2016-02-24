@@ -258,7 +258,8 @@ Status: Draft
   TRIED_DYSTOPIC_GUARDS with priority to the ones we haven't
   tried recently. For each entry, if it was not possible to connect
   to it, mark the entry as unreachable again. In the other hand, if
-  it was possible to connect, close this connection and move to
+  it was possible to connect this guard should be marked as discardable,
+  mark guards in PRIMARY_GUARDS for retry and, set next to
   STATE_PRIMARY_GUARDS.
 
 
@@ -424,6 +425,7 @@ utopic threshold in that case next time we run the algorithm?]
 
       while True:
         entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
+	if entryGuard.isDiscardable() continue
         circuit = buildCircuitWith(entryGuard)
         if circuit:
           ALGO_CHOOSE_ENTRY_GUARD_END(context, entryGuard)
