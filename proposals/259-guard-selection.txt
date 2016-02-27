@@ -57,10 +57,10 @@ Status: Draft
   following scenario, it is assumed that Alice has already obtained a
   recent, valid, and verifiable consensus document.
 
-  The algorithm is divided into three components such that the full
+  The algorithm is divided into four components such that the full
   algorithm is implemented by first invoking START, then repeatedly
-  calling NEXT and finally calling END. Several components of NEXT can
-  be invoked asynchronously.
+  calling NEXT and SHOULD_CONTINUE and finally calling END. Several
+  components of NEXT can be invoked asynchronously.
 
   This algorithm keeps track of the unreachability status for guards
   in state private to the algorithm - this is re-initialized every time
@@ -249,12 +249,12 @@ Status: Draft
 §2.2.4. The STATE_RETRY_ONLY state
 
   Return each entry from the union of TRIED_GUARDS and
-  TRIED_DYSTOPIC_GUARDS with priority to the ones we haven't
-  tried recently. For each entry, if it was not possible to connect
-  to it, mark the entry as unreachable again. In the other hand, if
-  it was possible to connect this guard should be marked as discardable,
-  mark guards in PRIMARY_GUARDS for retry and, set next to
-  STATE_PRIMARY_GUARDS.
+  TRIED_DYSTOPIC_GUARDS with priority to the ones we haven't tried
+  recently. For each entry, if it was not possible to connect to it,
+  mark the entry as unreachable again. If it was possible to connect,
+  it is possible the internet connection has returned. In order to
+  capture this case, we should mark the guards in PRIMARY_GUARDS for
+  retry, and set the next state to STATE_PRIMARY_GUARDS.
 
 
 §2.2.5. ON_NEW_CONSENSUS
@@ -275,7 +275,20 @@ Status: Draft
   long.
 
 
-§2.3. The END algorithm
+§2.3. The SHOULD_CONTINUE algorithm
+
+  This algorithm takes as an argument a boolean indicating whether the
+  circuit was successfully built or not.
+
+  After the caller have tried to build a circuit with a returned
+  guard, they should invoke SHOULD_CONTINUE to understand if the
+  algorithm is finished or not. SHOULD_CONTINUE will always return
+  true if the circuit failed. If the circuit succeeded,
+  SHOULD_CONTINUE will always return false, unless the current state
+  is STATE_RETRY_ONLY, when it will return true.
+
+
+§2.4. The END algorithm
 
   The goal of this algorithm is simply to make sure that we keep track
   of successful connections made. This algorithm should be invoked
@@ -285,7 +298,7 @@ Status: Draft
   sure it is in USED_GUARDS.
 
 
-§2.4. Helper algorithms
+§2.5. Helper algorithms
 
   These algorithms are used in the above algorithms, but have been
   separated out here in order to make the flow clearer.
@@ -412,12 +425,10 @@ utopic threshold in that case next time we run the algorithm?]
 
       while True:
         entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
-        circuit = buildCircuitWith(entryGuard)
-        if circuit:
-	  if entryGuard.isDiscardable():
-	    continue
-	  else:
-            ALGO_CHOOSE_ENTRY_GUARD_END(context, entryGuard)
-            return circuit
+        circuit = composeCircuitAndConnect(entryGuard)
+
+        if not SHOULD_CONTINUE(isSuccessful(circuit)):
+          ALGO_CHOOSE_ENTRY_GUARD_END(context, entryGuard)
+          return circuit
 
 -*- coding: utf-8 -*-
