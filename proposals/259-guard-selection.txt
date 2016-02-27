@@ -292,8 +292,7 @@ Status: Draft
 
   NEXT_PRIMARY_GUARD
       - Return the first entry from USED_GUARDS that is not in
-        PRIMARY_GUARDS, that is in the most recent consensus and,
-	that is not marked as unreachable.
+        PRIMARY_GUARDS and that is in the most recent consensus.
       - If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
         REMAINING_UTOPIC_GUARDS as the argument.
 
