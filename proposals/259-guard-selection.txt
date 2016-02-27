@@ -168,11 +168,6 @@ Status: Draft
   any of the PRIMARY_GUARDS. If this is the case, and we are not in
   STATE_PRIMARY_GUARDS, we should save the previous state and set the
   state to STATE_PRIMARY_GUARDS.
-  [XXX Why doing this before jumping in to state machine rather than on START?
-       Unless any state is expected to run for at least 1 second, this time check
-       will always have the same output - either at START or before any other
-       state's NEXT. And in the case a state is expected to run for 1 second, I
-       believe it is a problem, because this is supposed to be faster.]
 
 
 §2.2.1. The STATE_PRIMARY_GUARDS state
@@ -302,12 +297,6 @@ Status: Draft
 	that is not marked as unreachable.
       - If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
         REMAINING_UTOPIC_GUARDS as the argument.
-	[XXX Should the chosen guard be removed from REMAININ_UTOPIC_GUARDS?]
-	[XXX Don't we care if is bad or not in most recent consensus?]
-  [XXX The spec does not care if this "next" node is known to be unreachable, and
-       we pick it anyways. We should not pick unreachable nodes.]
-  [XXX The spec does not care if this node from REMAININ_UTOPIC_GUARDS is already in
-       PRIMARY_GUARDS, does it? We should.]
 
   NEXT_BY_BANDWIDTH
       - Takes G as an argument, which should be a set of guards to
