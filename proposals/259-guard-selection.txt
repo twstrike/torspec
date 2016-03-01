@@ -60,7 +60,11 @@ Status: Draft
   The algorithm is divided into four components such that the full
   algorithm is implemented by first invoking START, then repeatedly
   calling NEXT and SHOULD_CONTINUE and finally calling END. Several
-  components of NEXT can be invoked asynchronously.
+  components of NEXT can be invoked asynchronously. SHOULD_CONTINUE is
+  used for the algorithm to be able to tell the caller whether we
+  consider the work done or not - this can be used to retry primary
+  guards when we finally are able to connect to a guard after a long
+  network outage, for example.
 
   This algorithm keeps track of the unreachability status for guards
   in state private to the algorithm - this is re-initialized every time
@@ -75,7 +79,10 @@ Status: Draft
   blocks most ports. The way it does this is by keeping track of how
   many guards we have exposed ourselves to, and if we have connected
   to too many we will fall back to only retrying the ones we have
-  already tried.
+  already tried. The algorithm also decides on sample set that should
+  be persisted - in order to minimize the risk of an attacker forcing
+  enumeration of the whole network by triggering rebuilding of
+  circuits.
 
 
 §2.1. The START algorithm
@@ -90,6 +97,22 @@ Status: Draft
       list in order to minimize our exposure. The list is expected to
       be sorted based on priority, where the first entry will have the
       highest priority.
+
+  SAMPLED_UTOPIC_GUARDS
+      This is a set that contains all guards that should be considered
+      for connection under utopic conditions. This set should be
+      persisted between runs. It will be filled in by the algorithm if
+      it's empty, or if it contains less than SAMPLE_SET_THRESHOLD
+      guards after winnowing out older guards. It should be filled by
+      using NEXT_BY_BANDWIDTH with UTOPIC_GUARDS as an argument.
+
+  SAMPLED_DYSTOPIC_GUARDS
+      This is a set that contains all guards that should be considered
+      for connection under dystopic conditions. This set should be
+      persisted between runs. It will be filled in by the algorithm if
+      it's empty, or if it contains less than SAMPLE_SET_THRESHOLD
+      guards after winnowing out older guards. It should be filled by
+      using NEXT_BY_BANDWIDTH with DYSTOPIC_GUARDS as an argument.
 
   EXCLUDE_NODES
       A set of nodes that we should not consider using as a guard.
@@ -112,24 +135,26 @@ Status: Draft
       EXCLUDE_NODES and potentially filtered if DIR is set.
 
   UTOPIC_GUARDS
-      This is a set of all guards to use under utopic conditions. This
+      This is a set of all guards to use under utopic conditions. It
+      will primarily be used to fill in SAMPLED_UTOPIC_GUARDS. This
       set will be initialized to be the same as GUARDS.
 
   DYSTOPIC_GUARDS
       This is a set of all guards to use under dystopic conditions
       (usually when we are subject to a firewall that restricts the
-      ports we can connect to). This set will be initialized to be the
+      ports we can connect to).  It will primarily be used to fill in
+      SAMPLED_UTOPIC_GUARDS.  This set will be initialized to be the
       subset of GUARDS that listen to ports that are allowed by
       dystopic conditions.
 
   REMAINING_UTOPIC_GUARDS
       This is a running set of the utopic guards we have not yet tried
-      to connect to. It should be initialized to be UTOPIC_GUARDS
+      to connect to. It should be initialized to be SAMPLED_UTOPIC_GUARDS
       without USED_GUARDS.
 
   REMAINING_DYSTOPIC_GUARDS
       This is a running set of the dystopic guards we have not yet tried
-      to connect to. It should be initialized to be DYSTOPIC_GUARDS
+      to connect to. It should be initialized to be SAMPLED_DYSTOPIC_GUARDS
       without USED_GUARDS.
 
   TRIED_GUARDS
@@ -174,13 +199,11 @@ Status: Draft
 
   Return each entry in PRIMARY_GUARDS in turn. For each entry, if it
   was not possible to connect to it, mark the entry as unreachable,
-  add it to TRIED_GUARDS.
+  and add it to TRIED_GUARDS.
   [XXX defining "was not possible to connect" as "entry is not live" according
        to current definition of "live entry guard" in tor source code, seems
        to improve success rate on the flaky network scenario.
        See: https://github.com/twstrike/tor_guardsim/issues/1#issuecomment-187374942]
-
-  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as an argument.
 
   If all entries have been tried, restore the previous state and go
   there. If there is no previous state, transition to STATE_TRY_UTOPIC.
@@ -197,20 +220,13 @@ Status: Draft
   turn. For each entry, if it was not possible to connect to it, mark
   the entry as unreachable and add it to TRIED_GUARDS.
 
-  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as the argument.
-
-  Invoke CHECK_FAILOVER with TRIED_GUARDS, UTOPIC_GUARDS and
-  STATE_TRY_DYSTOPIC as arguments.
-
   Return each entry from REMAINING_UTOPIC_GUARDS using
   NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
   to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
   unreachable and add it to TRIED_GUARDS.
 
-  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS as the argument again.
-
-  Invoke CHECK_FAILOVER with TRIED_GUARDS, UTOPIC_GUARDS and
-  STATE_TRY_DYSTOPIC as arguments.
+  If no entries remain in REMAINING_UTOPIC_GUARDS, transition to
+  STATE_TRY_DYSTOPIC.
 
 
 §2.2.3. The STATE_TRY_DYSTOPIC state
@@ -224,37 +240,13 @@ Status: Draft
   turn. For each entry, if it was not possible to connect to it, mark
   the entry as unreachable and add it to TRIED_DYSTOPIC_GUARDS.
 
-  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS unioned with
-  TRIED_DYSTOPIC_GUARDS as the argument.
-
-  Invoke CHECK_FAILOVER with TRIED_DYSTOPIC_GUARDS, DYSTOPIC_GUARDS and
-  STATE_ONLY_RETRY as arguments. If the failover check fails, mark all
-  guards in PRIMARY_GUARDS, TRIED_GUARDS and TRIED_DYSTOPIC_GUARDS as
-  not unreachable.
-
   Return each entry from REMAINING_DYSTOPIC_GUARDS using
   NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
   to it, remove the entry from REMAINING_DYSTOPIC_GUARDS, mark it as
   unreachable and add it to TRIED_DYSTOPIC_GUARDS.
 
-  Invoke CHECK_TRIED_THRESHOLD with TRIED_GUARDS unioned with
-  TRIED_DYSTOPIC_GUARDS as the argument.
-
-  Invoke CHECK_FAILOVER with TRIED_DYSTOPIC_GUARDS, DYSTOPIC_GUARDS and
-  STATE_ONLY_RETRY as arguments. If the failover check fails, mark all
-  guards in PRIMARY_GUARDS, TRIED_GUARDS and TRIED_DYSTOPIC_GUARDS as
-  not unreachable.
-
-
-§2.2.4. The STATE_RETRY_ONLY state
-
-  Return each entry from the union of TRIED_GUARDS and
-  TRIED_DYSTOPIC_GUARDS with priority to the ones we haven't tried
-  recently. For each entry, if it was not possible to connect to it,
-  mark the entry as unreachable again. If it was possible to connect,
-  it is possible the internet connection has returned. In order to
-  capture this case, we should mark the guards in PRIMARY_GUARDS for
-  retry, and set the next state to STATE_PRIMARY_GUARDS.
+  If no entries remain in REMAINING_DYSTOPIC_GUARDS, transition to
+  STATE_PRIMARY_GUARDS.
 
 
 §2.2.5. ON_NEW_CONSENSUS
@@ -284,8 +276,10 @@ Status: Draft
   guard, they should invoke SHOULD_CONTINUE to understand if the
   algorithm is finished or not. SHOULD_CONTINUE will always return
   true if the circuit failed. If the circuit succeeded,
-  SHOULD_CONTINUE will always return false, unless the current state
-  is STATE_RETRY_ONLY, when it will return true.
+  SHOULD_CONTINUE will always return false, unless the guard that
+  succeeded was the first guard to succeed after
+  INTERNET_LIKELY_DOWN_INTERVAL minutes - in that case it will set the
+  state to STATE_PRIMARY_GUARDS and return true.
 
 
 §2.4. The END algorithm
@@ -314,22 +308,6 @@ Status: Draft
         choose from.
       - Return a randomly select element from G, weighted by bandwidth.
 
-  CHECK_TRIED_THRESHOLD
-      - Takes G as an argument, which should be a set of guards that
-        have been tried.
-      - If the number of entries in G that were tried within
-        GUARDS_TRY_THRESHOLD_TIME is larger than GUARDS_TRY_THRESHOLD,
-        transition to STATE_RETRY_ONLY. We do this in order to ensure
-        that we don't expose ourselves to a large number of guards in a
-        short amount of time.
-
-  CHECK_FAILOVER
-      - Takes three arguments, TG which should be a set of guards that
-        have been tried, G which is the set of all guards that could
-        have been tried, and S which is a state to transfer to.
-      - If the number of entries in TG is larger than a
-        GUARDS_FAILOVER_THRESHOLD proportion of G, transition to
-        state S.
 
 §3. Consensus Parameters, & Configurable Variables
 
@@ -346,19 +324,6 @@ Status: Draft
       pass before we consider retrying primary guards again. The
       proposed value is 3.
 
-  GUARDS_TRY_THRESHOLD_TIME
-      We want to make sure we are not connecting to too many guards in
-      too short amount of time. This parameter controls how many
-      minutes this window of time should be. Proposed value is 120.
-
-  GUARDS_TRY_THRESHOLD
-      This parameter controls the maximum fraction of guards we should
-      try connecting to within GUARDS_TRY_THRESHOLD_TIME. This is a
-      fraction that should be taken against the total number of guards
-      in the consensus. If we assume the current consensus contains
-      1900 guards, a value of 0.03 gives us a maximum of 57 guards to
-      try connecting to. Proposed value is 0.03.
-
   GUARDS_RETRY_TIME
       In the normal course of selecting guards, we want to continue
       retrying unreachable guards in case they have become
@@ -366,24 +331,26 @@ Status: Draft
       before we should start consider guards for connecting
       again. Proposed value is 20.
 
-  GUARDS_FAILOVER_THRESHOLD
+  SAMPLE_SET_THRESHOLD
       In order to allow us to recognize dystopic situations or a
       completely unreachable network, we would like to avoid
-      connecting to too many guards before switching modes. This
-      parameter, expressed as a fraction, determines the number of
-      guards we should try connecting to before switching from utopic
-      to dystopic mode, or from dystopic to offline mode. If we assume
-      there are 1900 utopic guards and of them there are 500 dystopic
-      guards, a setting of 0.02 means we will try to connect to 38
-      utopic guards before switching to dystopic mode. At that point
-      we will try 10 more dystopic guards before we conclude that the
-      network is down. Proposed value is 0.02.
+      connecting to too many guards before switching modes. We also
+      want to avoid exposing ourselves to too many nodes in a
+      potentially hostile situation.  This parameter, expressed as a
+      fraction, determines the number of guards we should keep as the
+      sampled set of the only guards we will consider connecting
+      to. It will be used as a fraction for both the utopic and the
+      dystopic sampled set.  If we assume there are 1900 utopic guards
+      and of them there are 500 dystopic guards, a setting of 0.02
+      means we will have a sample set of 38 utopic guards and 10
+      dystopic guards. This limits our total exposure. Proposed value
+      is 0.02.
 
-
-[XXX: should we remember we are potentially dystopic, and lower the
-utopic threshold in that case next time we run the algorithm?]
-
-[XXX: what risks are we subjected to by not remembering previous choices? Can this lead to cycling again?]
+  INTERNET_LIKELY_DOWN_INTERVAL
+      The number of minutes since we started trying to find an entry
+      guard before we should consider the network down and consider
+      retrying primary guards before using a functioning guard
+      found. Proposed value 20.
 
 §4.  Security properties and behavior under various conditions
 
@@ -413,6 +380,11 @@ utopic threshold in that case next time we run the algorithm?]
   guards selected before we fall back. In real terms, this means an
   attacker would need to control over 10% of all guards in order to
   have a larger than 50% chance of controlling a guard for any given client.
+
+  In addition, since the sampled set changes slowly (the suggestion
+  here is that guards in it expire every month) it is not possible for
+  an attacker to force a connection to an entry guard that isn't
+  already in the users sampled set.
 
 
 §A. Appendix: An example usage
