@@ -268,6 +268,8 @@ Status: Draft
   PRIMARY_GUARDS. If this results in PRIMARY_GUARDS being larger than
   N_PRIMARY_GUARDS, truncate the list to be N_PRIMARY_GUARDS entries
   long.
+  [XXX Does "add it back in the place it should have been in PRIMARY_GUARDS
+  if it had been non-bad" implies keeping original order?]
 
 
 §2.3. The SHOULD_CONTINUE algorithm
@@ -293,6 +295,8 @@ Status: Draft
 
   Once invoked, this algorithm will mark the guard as used, and make
   sure it is in USED_GUARDS.
+  [XXX if the guard is not in USED_GUARDS should be added *first*?
+  Important because it will affect on the building of PRIMARY_GUARDS.]
 
 
 §2.5. Helper algorithms
