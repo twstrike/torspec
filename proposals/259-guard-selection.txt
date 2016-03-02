@@ -59,9 +59,11 @@ Status: Draft
 
   The algorithm is divided into four components such that the full
   algorithm is implemented by first invoking START, then repeatedly
-  calling NEXT and SHOULD_CONTINUE and finally calling END. Several
-  components of NEXT can be invoked asynchronously. SHOULD_CONTINUE is
-  used for the algorithm to be able to tell the caller whether we
+  calling NEXT while adviced it SHOULD_CONTINUE and finally calling
+  END. For an example usage see §A. Appendix.
+
+  Several components of NEXT can be invoked asynchronously. SHOULD_CONTINUE
+  is used for the algorithm to be able to tell the caller whether we
   consider the work done or not - this can be used to retry primary
   guards when we finally are able to connect to a guard after a long
   network outage, for example.
@@ -127,8 +129,9 @@ Status: Draft
       If this argument is set, we should only consider guards that can
       be directory guards. If not set, we will consider all guards.
 
-  The primary work of START is to initialize the different states we
-  will need. These are:
+  The primary work of START is to initialize the state machine depicted
+  in §2.2 The NEXT algorithm.
+  The initial state of the machine is defined by:
 
   GUARDS
       This is a set of all guards from the consensus, without
@@ -328,7 +331,7 @@ Status: Draft
       In the normal course of selecting guards, we want to continue
       retrying unreachable guards in case they have become
       reachable. This parameter controls the minimum amount of minutes
-      before we should start consider guards for connecting
+      before we should start to consider guards for connecting
       again. Proposed value is 20.
 
   SAMPLE_SET_THRESHOLD
@@ -370,7 +373,8 @@ Status: Draft
 
   When the network is completely down, we will try to connect to 2% of
   all guards plus 2% of all dystopic guards before realizing we are
-  down. This means circa 50 guards tried.
+  down. This means circa 50 guards tried assuming there are 1900 guards
+  in the network.
 
   In terms of exposure, we will connect to a maximum of 2% of all
   guards plus 2% of all dystopic guards, or 3% of all guards,
