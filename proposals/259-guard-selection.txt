@@ -69,8 +69,10 @@ Status: Draft
   network outage, for example.
 
   This algorithm keeps track of the unreachability status for guards
-  in state private to the algorithm - this is re-initialized every time
-  START is called.
+  in state global to the system, so that repeated runs will not have
+  to rediscover unreachability over and over again. However, this
+  state does not need to be persisted permanently - it is purely an
+  optimization.
 
   The algorithm expects several arguments to guide its behavior. These
   will be defined in §2.1.
@@ -130,8 +132,7 @@ Status: Draft
       be directory guards. If not set, we will consider all guards.
 
   The primary work of START is to initialize the state machine depicted
-  in §2.2 The NEXT algorithm.
-  The initial state of the machine is defined by:
+  in §2.2. The initial state of the machine is defined by:
 
   GUARDS
       This is a set of all guards from the consensus, without
@@ -145,28 +146,24 @@ Status: Draft
   DYSTOPIC_GUARDS
       This is a set of all guards to use under dystopic conditions
       (usually when we are subject to a firewall that restricts the
-      ports we can connect to).  It will primarily be used to fill in
-      SAMPLED_UTOPIC_GUARDS.  This set will be initialized to be the
+      ports we can connect to). It will primarily be used to fill in
+      SAMPLED_DYSTOPIC_GUARDS. This set will be initialized to be the
       subset of GUARDS that listen to ports that are allowed by
       dystopic conditions.
 
   REMAINING_UTOPIC_GUARDS
       This is a running set of the utopic guards we have not yet tried
-      to connect to. It should be initialized to be SAMPLED_UTOPIC_GUARDS
-      without USED_GUARDS.
+      to connect to. It should be initialized to be
+      SAMPLED_UTOPIC_GUARDS without USED_GUARDS. It will also be
+      refilled with guards we haven't tried for a while (see first
+      paragraph of §2.2.2.)
 
   REMAINING_DYSTOPIC_GUARDS
-      This is a running set of the dystopic guards we have not yet tried
-      to connect to. It should be initialized to be SAMPLED_DYSTOPIC_GUARDS
-      without USED_GUARDS.
-
-  TRIED_GUARDS
-      This set keeps track of all utopic guards we have tried connecting
-      to. This should be initialized to the empty set.
-
-  TRIED_DYSTOPIC_GUARDS
-      This set keeps track of all dystopic guards we have tried connecting
-      to. This should be initialized to the empty set.
+      This is a running set of the dystopic guards we have not yet
+      tried to connect to. It should be initialized to be
+      SAMPLED_DYSTOPIC_GUARDS without USED_GUARDS. It will also be
+      refilled with guards we haven't tried for a while (see first
+      paragraph of §2.2.2.)
 
   STATE
       A variable that keeps track of which state in the state
@@ -201,8 +198,7 @@ Status: Draft
 §2.2.1. The STATE_PRIMARY_GUARDS state
 
   Return each entry in PRIMARY_GUARDS in turn. For each entry, if it
-  was not possible to connect to it, mark the entry as unreachable,
-  and add it to TRIED_GUARDS.
+  was not possible to connect to it and mark the entry as unreachable
   [XXX defining "was not possible to connect" as "entry is not live" according
        to current definition of "live entry guard" in tor source code, seems
        to improve success rate on the flaky network scenario.
@@ -214,19 +210,14 @@ Status: Draft
 
 §2.2.2. The STATE_TRY_UTOPIC state
 
-  In order to give guards that have been marked as unreachable a
-  chance to come back, add all entries in TRIED_GUARDS that were
-  marked as unreachable more than GUARDS_RETRY_TIME minutes ago back
-  to REMAINING_UTOPIC_GUARDS.
-
   Return each entry in USED_GUARDS that is not in PRIMARY_GUARDS in
-  turn. For each entry, if it was not possible to connect to it, mark
-  the entry as unreachable and add it to TRIED_GUARDS.
+  turn. For each entry, if it was not possible to connect to it and mark
+  the entry as unreachable.
 
   Return each entry from REMAINING_UTOPIC_GUARDS using
   NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
-  to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
-  unreachable and add it to TRIED_GUARDS.
+  to it, remove the entry from REMAINING_UTOPIC_GUARDS and mark it as
+  unreachable.
 
   If no entries remain in REMAINING_UTOPIC_GUARDS, transition to
   STATE_TRY_DYSTOPIC.
@@ -234,19 +225,14 @@ Status: Draft
 
 §2.2.3. The STATE_TRY_DYSTOPIC state
 
-  In order to give guards that have been marked as unreachable a
-  chance to come back, add all entries in TRIED_DYSTOPIC_GUARDS that were
-  marked as unreachable more than GUARDS_RETRY_TIME minutes ago back
-  to REMAINING_DYSTOPIC_GUARDS.
-
   Return each dystopic entry in USED_GUARDS that is not in PRIMARY_GUARDS in
-  turn. For each entry, if it was not possible to connect to it, mark
-  the entry as unreachable and add it to TRIED_DYSTOPIC_GUARDS.
+  turn. For each entry, if it was not possible to connect to it and mark
+  the entry as unreachable.
 
   Return each entry from REMAINING_DYSTOPIC_GUARDS using
   NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
-  to it, remove the entry from REMAINING_DYSTOPIC_GUARDS, mark it as
-  unreachable and add it to TRIED_DYSTOPIC_GUARDS.
+  to it, remove the entry from REMAINING_DYSTOPIC_GUARDS and mark it as
+  unreachable.
 
   If no entries remain in REMAINING_DYSTOPIC_GUARDS, transition to
   STATE_PRIMARY_GUARDS.
@@ -255,8 +241,9 @@ Status: Draft
 §2.2.5. ON_NEW_CONSENSUS
 
   First, ensure that all guard profiles are updated with information
-  about whether they were in the newest consensus or not. If not, the
-  guard is considered bad.
+  about whether they were in the newest consensus or not. If a guard
+  is not included in the newest consensus, the guard is considered
+  bad.
 
   If any PRIMARY_GUARDS have become bad, remove the guard from
   PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
@@ -268,8 +255,6 @@ Status: Draft
   PRIMARY_GUARDS. If this results in PRIMARY_GUARDS being larger than
   N_PRIMARY_GUARDS, truncate the list to be N_PRIMARY_GUARDS entries
   long.
-  [XXX Does "add it back in the place it should have been in PRIMARY_GUARDS
-  if it had been non-bad" implies keeping original order?]
 
 
 §2.3. The SHOULD_CONTINUE algorithm
@@ -294,9 +279,7 @@ Status: Draft
   with the guard that was used to correctly set up a circuit.
 
   Once invoked, this algorithm will mark the guard as used, and make
-  sure it is in USED_GUARDS.
-  [XXX if the guard is not in USED_GUARDS should be added *first*?
-  Important because it will affect on the building of PRIMARY_GUARDS.]
+  sure it is in USED_GUARDS, by adding it at the end if it was not there.
 
 
 §2.5. Helper algorithms
@@ -357,7 +340,7 @@ Status: Draft
       The number of minutes since we started trying to find an entry
       guard before we should consider the network down and consider
       retrying primary guards before using a functioning guard
-      found. Proposed value 20.
+      found. Proposed value 5.
 
 §4.  Security properties and behavior under various conditions
 
