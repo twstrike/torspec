@@ -314,13 +314,6 @@ Status: Draft
       pass before we consider retrying primary guards again. The
       proposed value is 3.
 
-  GUARDS_RETRY_TIME
-      In the normal course of selecting guards, we want to continue
-      retrying unreachable guards in case they have become
-      reachable. This parameter controls the minimum amount of minutes
-      before we should start to consider guards for connecting
-      again. Proposed value is 20.
-
   SAMPLE_SET_THRESHOLD
       In order to allow us to recognize dystopic situations or a
       completely unreachable network, we would like to avoid
