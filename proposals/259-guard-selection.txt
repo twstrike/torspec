@@ -384,7 +384,13 @@ Status: Draft
   pseudo code illustrates the building of a circuit:
 
     OPEN_CIRCUIT:
-      context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards, [], 3, false)
+      context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards,
+                                sampled_utopic_guards=[],
+                                sampled_dystopic_guards=[],
+                                exclude_nodes=[],
+                                n_primary_guards=3,
+                                dir=false,
+                                guards_in_consensus)
 
       while True:
         entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
