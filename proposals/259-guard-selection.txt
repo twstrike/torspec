@@ -154,16 +154,12 @@ Status: Draft
   REMAINING_UTOPIC_GUARDS
       This is a running set of the utopic guards we have not yet tried
       to connect to. It should be initialized to be
-      SAMPLED_UTOPIC_GUARDS without USED_GUARDS. It will also be
-      refilled with guards we haven't tried for a while (see first
-      paragraph of §2.2.2.)
+      SAMPLED_UTOPIC_GUARDS without USED_GUARDS. 
 
   REMAINING_DYSTOPIC_GUARDS
       This is a running set of the dystopic guards we have not yet
       tried to connect to. It should be initialized to be
-      SAMPLED_DYSTOPIC_GUARDS without USED_GUARDS. It will also be
-      refilled with guards we haven't tried for a while (see first
-      paragraph of §2.2.2.)
+      SAMPLED_DYSTOPIC_GUARDS without USED_GUARDS.
 
   STATE
       A variable that keeps track of which state in the state
