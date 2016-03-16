@@ -221,10 +221,6 @@ Status: Draft
 
 §2.2.3. The STATE_TRY_DYSTOPIC state
 
-  Return each dystopic entry in USED_GUARDS that is not in PRIMARY_GUARDS in
-  turn. For each entry, if it was not possible to connect to it and mark
-  the entry as unreachable.
-
   Return each entry from REMAINING_DYSTOPIC_GUARDS using
   NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
   to it, remove the entry from REMAINING_DYSTOPIC_GUARDS and mark it as
