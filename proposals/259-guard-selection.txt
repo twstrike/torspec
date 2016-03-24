@@ -190,6 +190,10 @@ Status: Draft
   STATE_PRIMARY_GUARDS, we should save the previous state and set the
   state to STATE_PRIMARY_GUARDS.
 
+  # XXX Previously Tor client will check uptime and capacity when selecting
+  guards, but in #18624 we consider restrict all the guards stable & fast
+  in Dir authorities. So that, we can ignore this later once it's released.
+
 
 §2.2.1. The STATE_PRIMARY_GUARDS state
 
