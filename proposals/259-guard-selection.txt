@@ -384,10 +384,10 @@ Status: Draft
                                   dir=false,
                                   guards_in_consensus)
 
-        entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
-        circuit = composeCircuit(entryGuard)
-        circuit->context = context
-        return circuit
+      entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
+      circuit = composeCircuit(entryGuard)
+      circuit->context = context
+      return circuit
 
     ON_FIRST_HOP_CALLBACK(channel):
 
