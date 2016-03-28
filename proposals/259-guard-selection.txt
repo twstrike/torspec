@@ -372,43 +372,62 @@ Status: Draft
   In order to clarify how this algorithm is supposed to be used, this
   pseudo code illustrates the building of a circuit:
 
-    OPEN_CIRCUIT:
-      context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards,
-                                sampled_utopic_guards=[],
-                                sampled_dystopic_guards=[],
-                                exclude_nodes=[],
-                                n_primary_guards=3,
-                                dir=false,
-                                guards_in_consensus)
+    ESTABLISH_CIRCUIT:
+
+      context = Failed_Guard_Selections.pop()
+      if context = NULL
+        context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards,
+                                  sampled_utopic_guards=[],
+                                  sampled_dystopic_guards=[],
+                                  exclude_nodes=[],
+                                  n_primary_guards=3,
+                                  dir=false,
+                                  guards_in_consensus)
 
         entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
-        circuit = composeCircuitAndConnect(entryGuard)
+        circuit = composeCircuit(entryGuard)
+        circuit->context = context
+        return circuit
 
-        if not SHOULD_CONTINUE(isSuccessful(circuit)):
-          ALGO_CHOOSE_ENTRY_GUARD_END(context, entryGuard)
-          return circuit
-        else
-          return NULL
+    ON_FIRST_HOP_CALLBACK(channel):
+
+      if Successful:
+        for_each(channel->circuits, circuit) // XXX I really suspect this is a bad idea.
+            ALGO_CHOOSE_ENTRY_GUARD_END(circuit->context, entryGuard)
+      else
+        for_each(channel->circuits, circuit) // XXX Do we really want to use circuit id to track?
+            Failed_Guard_Selections.push(channel->circuits->context)
 
 §B. Appendix: Entry Points in Tor
 
   In order to clarify how this algorithm is supposed to be integrated with
   Tor, here are some entry points to trigger actions mentioned in spec:
 
-    When user need to establish_circuit:
-        check if there are enough entry_nodes in primary_guards, if not we
-        should fill it in ALGO_CHOOSE_ENTRY_GUARD_START
+    When establish_circuit:
 
-        After this when we want to choose_good_entry_server, we will use
-        ALGO_CHOOSE_ENTRY_GUARD_NEXT to get a candidate.
+        If Failed_Guard_Selections exist, populate the first one as *context*
+        Otherwise, use ALGO_CHOOSE_ENTRY_GUARD_START to initalize a new *context*.
 
-        We will use this candidate to build_circuit and handle_first_hop,
-           if !build_failed:
-              we call the ALGO_CHOOSE_ENTRY_GUARD_END and return the circuit
-           else:
-              we return NULL circuit
+            check if there are enough entry_nodes in primary_guards, if not we
+            should fill it in ALGO_CHOOSE_ENTRY_GUARD_START // XXX now It seems the START is not a good place
 
-    When new directory_info_has_arrived
+            After this when we want to choose_good_entry_server, we will use
+            ALGO_CHOOSE_ENTRY_GUARD_NEXT to get a candidate.
+
+            We will use this candidate to build_circuit and handle_first_hop,
+            return this circuit and link the circuit with this *context*
+
+    When entry_guard_register_connect_status(channel):
+
+        if !build_failed:
+           Find all the circuits using this channel (by guard identity)
+           We call the ALGO_CHOOSE_ENTRY_GUARD_END for each of them
+        else:
+           Find all the circuits using this channel (by guard identity)
+           We add the linked *context* of each of them to Failed_Guard_Selections
+
+    When new directory_info_has_arrived:
+
         Do ON_NEW_CONSENSUS
 
 -*- coding: utf-8 -*-
