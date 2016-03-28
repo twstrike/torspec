@@ -389,13 +389,13 @@ Status: Draft
       circuit->context = context
       return circuit
 
-    ON_FIRST_HOP_CALLBACK(channel):
+    ON_FIRST_HOP_CALLBACK(channel): // XXX Maybe we can use the Cell to get a Circuit ID instead
 
       if Successful:
         for_each(channel->circuits, circuit) // XXX I really suspect this is a bad idea.
             ALGO_CHOOSE_ENTRY_GUARD_END(circuit->context, entryGuard)
       else
-        for_each(channel->circuits, circuit) // XXX Do we really want to use circuit id to track?
+        for_each(channel->circuits, circuit) // XXX Do we really want to use guard id to track all circuits?
             Failed_Guard_Selections.push(channel->circuits->context)
 
 §B. Appendix: Entry Points in Tor
