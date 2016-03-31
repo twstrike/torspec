@@ -374,29 +374,26 @@ Status: Draft
 
     ESTABLISH_CIRCUIT:
 
-      context = Failed_Guard_Selections.pop()
-      if context = NULL
-        context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards,
-                                  sampled_utopic_guards=[],
-                                  sampled_dystopic_guards=[],
-                                  exclude_nodes=[],
-                                  n_primary_guards=3,
-                                  dir=false,
-                                  guards_in_consensus)
+      if chosen_entry_node = NULL
+        if context = NULL
+          context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards,
+                                    sampled_utopic_guards=[],
+                                    sampled_dystopic_guards=[],
+                                    exclude_nodes=[],
+                                    n_primary_guards=3,
+                                    dir=false,
+                                    guards_in_consensus)
 
-      entryGuard = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
-      circuit = composeCircuit(entryGuard)
-      circuit->context = context
+        chosen_entry_node = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
+      circuit = composeCircuit(chosen_entry_node)
       return circuit
 
-    ON_FIRST_HOP_CALLBACK(channel): // XXX Maybe we can use the Cell to get a Circuit ID instead
+    ON_FIRST_HOP_CALLBACK(channel):
 
-      if Successful:
-        for_each(channel->circuits, circuit) // XXX I really suspect this is a bad idea.
-            ALGO_CHOOSE_ENTRY_GUARD_END(circuit->context, entryGuard)
+      if !SHOULD_CONTINUE:
+            ALGO_CHOOSE_ENTRY_GUARD_END(entryGuard)
       else
-        for_each(channel->circuits, circuit) // XXX Do we really want to use guard id to track all circuits?
-            Failed_Guard_Selections.push(channel->circuits->context)
+            chosen_entry_node = NULL
 
 §B. Appendix: Entry Points in Tor
 
@@ -405,26 +402,22 @@ Status: Draft
 
     When establish_circuit:
 
-        If Failed_Guard_Selections exist, populate the first one as *context*
-        Otherwise, use ALGO_CHOOSE_ENTRY_GUARD_START to initalize a new *context*.
-
-            check if there are enough entry_nodes in primary_guards, if not we
-            should fill it in ALGO_CHOOSE_ENTRY_GUARD_START // XXX now It seems the START is not a good place
+        If *chosen_entry_node* doesn't exist
+            If *context* exist, populate the first one as *context*
+            Otherwise, use ALGO_CHOOSE_ENTRY_GUARD_START to initalize a new *context*.
 
             After this when we want to choose_good_entry_server, we will use
             ALGO_CHOOSE_ENTRY_GUARD_NEXT to get a candidate.
 
-            We will use this candidate to build_circuit and handle_first_hop,
-            return this circuit and link the circuit with this *context*
+        Use chosen_entry_node to build_circuit and handle_first_hop,
+        return this circuit
 
-    When entry_guard_register_connect_status(channel):
+    When entry_guard_register_connect_status(should_continue):
 
-        if !build_failed:
-           Find all the circuits using this channel (by guard identity)
-           We call the ALGO_CHOOSE_ENTRY_GUARD_END for each of them
+        if !should_continue:
+           Call ALGO_CHOOSE_ENTRY_GUARD_END(chosen_entry_node)
         else:
-           Find all the circuits using this channel (by guard identity)
-           We add the linked *context* of each of them to Failed_Guard_Selections
+           Set chosen_entry_node to NULL
 
     When new directory_info_has_arrived:
 
