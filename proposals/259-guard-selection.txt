@@ -204,8 +204,8 @@ Status: Draft
        to improve success rate on the flaky network scenario.
        See: https://github.com/twstrike/tor_guardsim/issues/1#issuecomment-187374942]
 
-  If all entries have been tried, restore the previous state and go
-  there. If there is no previous state, transition to STATE_TRY_UTOPIC.
+  If all entries have been tried, restore the previous state and resume
+  the selection. If there is no previous state, transition to STATE_TRY_UTOPIC.
 
 
 §2.2.2. The STATE_TRY_UTOPIC state
