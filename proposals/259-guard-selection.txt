@@ -91,6 +91,9 @@ Status: Draft
 
 §2.1. The START algorithm
 
+  [xxx describe HOW the following settings affect the proposal:
+  UseBridges, UseEntryGuards, UseEntryGuardsAsDirGuards]
+
   In order to start choosing an entry guard, use the START
   algorithm. This takes four arguments that can be used to fine tune
   the workings:
@@ -102,21 +105,13 @@ Status: Draft
       be sorted based on priority, where the first entry will have the
       highest priority.
 
-  SAMPLED_UTOPIC_GUARDS
+  SAMPLED_GUARDS
       This is a set that contains all guards that should be considered
       for connection under utopic conditions. This set should be
       persisted between runs. It will be filled in by the algorithm if
       it's empty, or if it contains less than SAMPLE_SET_THRESHOLD
       guards after winnowing out older guards. It should be filled by
-      using NEXT_BY_BANDWIDTH with UTOPIC_GUARDS as an argument.
-
-  SAMPLED_DYSTOPIC_GUARDS
-      This is a set that contains all guards that should be considered
-      for connection under dystopic conditions. This set should be
-      persisted between runs. It will be filled in by the algorithm if
-      it's empty, or if it contains less than SAMPLE_SET_THRESHOLD
-      guards after winnowing out older guards. It should be filled by
-      using NEXT_BY_BANDWIDTH with DYSTOPIC_GUARDS as an argument.
+      using NEXT_BY_BANDWIDTH with GUARDS as an argument.
 
   EXCLUDE_NODES
       A set of nodes that we should not consider using as a guard.
@@ -135,31 +130,17 @@ Status: Draft
   in §2.2. The initial state of the machine is defined by:
 
   GUARDS
-      This is a set of all guards from the consensus, without
-      EXCLUDE_NODES and potentially filtered if DIR is set.
+      This is a set of all guards from the consensus. It will primarily be used
+      to fill in SAMPLED_GUARDS
 
-  UTOPIC_GUARDS
-      This is a set of all guards to use under utopic conditions. It
-      will primarily be used to fill in SAMPLED_UTOPIC_GUARDS. This
-      set will be initialized to be the same as GUARDS.
+  FILTERED_SAMPLED
+      This is a set that contains all guards that we are willing to connect to.
+      It will be obtained from calling FILTER_SET with SAMPLED_GUARDS as
+      argument. 
 
-  DYSTOPIC_GUARDS
-      This is a set of all guards to use under dystopic conditions
-      (usually when we are subject to a firewall that restricts the
-      ports we can connect to). It will primarily be used to fill in
-      SAMPLED_DYSTOPIC_GUARDS. This set will be initialized to be the
-      subset of GUARDS that listen to ports that are allowed by
-      dystopic conditions.
-
-  REMAINING_UTOPIC_GUARDS
-      This is a running set of the utopic guards we have not yet tried
-      to connect to. It should be initialized to be
-      SAMPLED_UTOPIC_GUARDS without USED_GUARDS. 
-
-  REMAINING_DYSTOPIC_GUARDS
-      This is a running set of the dystopic guards we have not yet
-      tried to connect to. It should be initialized to be
-      SAMPLED_DYSTOPIC_GUARDS without USED_GUARDS.
+  REMAINING_GUARDS
+      This is a running set of the guards we have not yet tried to connect to.
+      It should be initialized to be FILTERED_SAMPLED without USED_GUARDS. 
 
   STATE
       A variable that keeps track of which state in the state
@@ -205,32 +186,24 @@ Status: Draft
        See: https://github.com/twstrike/tor_guardsim/issues/1#issuecomment-187374942]
 
   If all entries have been tried, restore the previous state and resume
-  the selection. If there is no previous state, transition to STATE_TRY_UTOPIC.
+  the selection. If there is no previous state, transition to
+  STATE_TRY_REMAINING.
 
 
-§2.2.2. The STATE_TRY_UTOPIC state
+§2.2.2. The STATE_TRY_REMAINING state
 
   Return each entry in USED_GUARDS that is not in PRIMARY_GUARDS in
   turn. For each entry, if it was not possible to connect to it and mark
   the entry as unreachable.
+  [xxx Should we filter them - without expanding? They have already been used
+  anyways.]
 
-  Return each entry from REMAINING_UTOPIC_GUARDS using
+  Return each entry from REMAINING_GUARDS using
   NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
-  to it, remove the entry from REMAINING_UTOPIC_GUARDS and mark it as
+  to it, remove the entry from REMAINING_GUARDS and mark it as
   unreachable.
 
-  If no entries remain in REMAINING_UTOPIC_GUARDS, transition to
-  STATE_TRY_DYSTOPIC.
-
-
-§2.2.3. The STATE_TRY_DYSTOPIC state
-
-  Return each entry from REMAINING_DYSTOPIC_GUARDS using
-  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
-  to it, remove the entry from REMAINING_DYSTOPIC_GUARDS and mark it as
-  unreachable.
-
-  If no entries remain in REMAINING_DYSTOPIC_GUARDS, transition to
+  If no entries remain in REMAINING_GUARDS, transition to
   STATE_PRIMARY_GUARDS.
 
 
@@ -287,12 +260,34 @@ Status: Draft
       - Return the first entry from USED_GUARDS that is not in
         PRIMARY_GUARDS and that is in the most recent consensus.
       - If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
-        REMAINING_UTOPIC_GUARDS as the argument.
+        REMAINING_GUARDS as the argument.
 
   NEXT_BY_BANDWIDTH
       - Takes G as an argument, which should be a set of guards to
         choose from.
       - Return a randomly select element from G, weighted by bandwidth.
+
+  FILTER_SET
+      - Takes G as an argument, which should be a set of guards to filter.
+      - Filter out guards in G that not match the existing configuration 
+        (ClientUseIPv4, ClientUseIPv6, ClientPreferIPv6ORPort, EntryNodes,
+        ExcludeNodes, FascistFirewall, FirewallPorts, GeoIPExcludeUnknown,
+        GuardLifetime, ReachableAddresses, ReachableDirAddresses, 
+        ReachableORAddresses, etc).
+        [xxx we should filter out based on for_directory]
+        [xxx be specific on HOW each configuration filters out guards]
+      - If the filtered set is smaller than MINIMUM_FILTERED_SAMPLE_SIZE and G
+        is smaller than MAXIMUM_SAMPLE_SIZE_THRESHOLD, expand G and try to
+        filter out again. G is expanded by adding one new guard at a time using
+        NEXT_BY_BANDWIDTH with GUARDS as an argument.
+      - If G is not smaller than MAXIMUM_SAMPLE_SIZE_THRESHOLD, G should not be
+        expanded. Abort and report an error to the user.
+
+      [xxx Should SAMPLED_GUARDS be refilled in any other place? The user might
+      have enough filtered guards but they are still not reachable. The current
+      proposal wont call START() until the algorithm succeeds, meaning that
+      changing the configuration in an attempt to fix the issue will have no 
+      effect until it succeeds.]
 
 
 §3. Consensus Parameters, & Configurable Variables
@@ -311,19 +306,26 @@ Status: Draft
       proposed value is 3.
 
   SAMPLE_SET_THRESHOLD
-      In order to allow us to recognize dystopic situations or a
-      completely unreachable network, we would like to avoid
-      connecting to too many guards before switching modes. We also
-      want to avoid exposing ourselves to too many nodes in a
-      potentially hostile situation.  This parameter, expressed as a
+      In order to allow us to recognize completely unreachable network,
+      we would like to avoid connecting to too many guards before switching
+      modes. We also want to avoid exposing ourselves to too many nodes in a
+      potentially hostile situation. This parameter, expressed as a
       fraction, determines the number of guards we should keep as the
       sampled set of the only guards we will consider connecting
-      to. It will be used as a fraction for both the utopic and the
-      dystopic sampled set.  If we assume there are 1900 utopic guards
-      and of them there are 500 dystopic guards, a setting of 0.02
-      means we will have a sample set of 38 utopic guards and 10
-      dystopic guards. This limits our total exposure. Proposed value
-      is 0.02.
+      to. It will be used as a fraction for the sampled set.
+      If we assume there are 1900 guards, a setting of 0.02
+      means we will have a sample set of 38 guards.
+      This limits our total exposure. Proposed value is 0.02.
+
+  MINIMUM_FILTERED_SAMPLE_SIZE
+      The minimum size of the sampled set after filtering out nodes based on
+      client configuration (FILTERED_SAMPLED). Proposed value is ???.
+
+  MAXIMUM_SAMPLE_SIZE_THRESHOLD
+      In order to guarantee a minimum size of guards after filtering,
+      we expand SAMPLED_GUARDS until a limit.  This fraction of GUARDS will be
+      used as an upper bound when expanding SAMPLED_GUARDS.
+      Proposed value is 0.03.
 
   INTERNET_LIKELY_DOWN_INTERVAL
       The number of minutes since we started trying to find an entry
@@ -377,8 +379,7 @@ Status: Draft
       if chosen_entry_node = NULL
         if context = NULL
           context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards,
-                                    sampled_utopic_guards=[],
-                                    sampled_dystopic_guards=[],
+                                    sampled_guards=[],
                                     exclude_nodes=[],
                                     n_primary_guards=3,
                                     dir=false,
