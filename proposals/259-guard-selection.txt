@@ -113,9 +113,6 @@ Status: Draft
       guards after winnowing out older guards. It should be filled by
       using NEXT_BY_BANDWIDTH with GUARDS as an argument.
 
-  EXCLUDE_NODES
-      A set of nodes that we should not consider using as a guard.
-
   N_PRIMARY_GUARDS
       The number of guards we should consider our primary
       guards. These guards will be retried more frequently and will
@@ -380,7 +377,7 @@ Status: Draft
         if context = NULL
           context = ALGO_CHOOSE_ENTRY_GUARD_START(used_guards,
                                     sampled_guards=[],
-                                    exclude_nodes=[],
+                                    options,
                                     n_primary_guards=3,
                                     dir=false,
                                     guards_in_consensus)
