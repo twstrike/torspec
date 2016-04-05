@@ -79,10 +79,9 @@ Status: Draft
 
   The goal of this algorithm is to strongly prefer connecting to the
   same guards we have connected to before, while also trying to detect
-  conditions such as a network outage or a network environment that
-  blocks most ports. The way it does this is by keeping track of how
-  many guards we have exposed ourselves to, and if we have connected
-  to too many we will fall back to only retrying the ones we have
+  conditions such as a network outage. The way it does this is by keeping
+  track of how many guards we have exposed ourselves to, and if we have
+  connected to too many we will fall back to only retrying the ones we have
   already tried. The algorithm also decides on sample set that should
   be persisted - in order to minimize the risk of an attacker forcing
   enumeration of the whole network by triggering rebuilding of
@@ -92,7 +91,7 @@ Status: Draft
 §2.1. The START algorithm
 
   [xxx describe HOW the following settings affect the proposal:
-  UseBridges, UseEntryGuards, UseEntryGuardsAsDirGuards]
+  UseBridges, UseEntryGuards, UseEntryGuardsAsDirGuards, EntryNodes]
 
   In order to start choosing an entry guard, use the START
   algorithm. This takes four arguments that can be used to fine tune
@@ -177,6 +176,7 @@ Status: Draft
 
   Return each entry in PRIMARY_GUARDS in turn. For each entry, if it
   was not possible to connect to it and mark the entry as unreachable
+
   [XXX defining "was not possible to connect" as "entry is not live" according
        to current definition of "live entry guard" in tor source code, seems
        to improve success rate on the flaky network scenario.
@@ -184,7 +184,7 @@ Status: Draft
 
   If all entries have been tried, restore the previous state and resume
   the selection. If there is no previous state, transition to
-  STATE_TRY_REMAINING.
+  STATE_TRY_REMAINING.  [xxx this reads weird now: there is only 2 states]
 
 
 §2.2.2. The STATE_TRY_REMAINING state
@@ -204,7 +204,7 @@ Status: Draft
   STATE_PRIMARY_GUARDS.
 
 
-§2.2.5. ON_NEW_CONSENSUS
+§2.2.3. ON_NEW_CONSENSUS
 
   First, ensure that all guard profiles are updated with information
   about whether they were in the newest consensus or not. If a guard
@@ -267,7 +267,7 @@ Status: Draft
   FILTER_SET
       - Takes G as an argument, which should be a set of guards to filter.
       - Filter out guards in G that not match the existing configuration 
-        (ClientUseIPv4, ClientUseIPv6, ClientPreferIPv6ORPort, EntryNodes,
+        (ClientUseIPv4, ClientUseIPv6, ClientPreferIPv6ORPort,
         ExcludeNodes, FascistFirewall, FirewallPorts, GeoIPExcludeUnknown,
         GuardLifetime, ReachableAddresses, ReachableDirAddresses, 
         ReachableORAddresses, etc).
