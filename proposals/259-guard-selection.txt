@@ -445,9 +445,6 @@ Status: Draft
       [XXX should we describe all the conditions that make a guard to be disabled
            because of path bias issues?]
 
-      [XXX should we describe all conditions that make us considere the guard to
-           become unusable?]
-
     This conforms to the existing conditions in "entry_is_live()".
 
 
