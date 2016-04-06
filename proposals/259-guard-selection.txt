@@ -266,13 +266,8 @@ Status: Draft
 
   FILTER_SET
       - Takes G as an argument, which should be a set of guards to filter.
-      - Filter out guards in G that not match the existing configuration 
-        (ClientUseIPv4, ClientUseIPv6, ClientPreferIPv6ORPort,
-        ExcludeNodes, FascistFirewall, FirewallPorts, GeoIPExcludeUnknown,
-        GuardLifetime, ReachableAddresses, ReachableDirAddresses, 
-        ReachableORAddresses, etc).
-        [xxx we should filter out based on for_directory]
-        [xxx be specific on HOW each configuration filters out guards]
+      - Filter out guards in G that don't comply with IS_SUITABLE (see
+        appendix B).
       - If the filtered set is smaller than MINIMUM_FILTERED_SAMPLE_SIZE and G
         is smaller than MAXIMUM_SAMPLE_SIZE_THRESHOLD, expand G and try to
         filter out again. G is expanded by adding one new guard at a time using
@@ -393,6 +388,7 @@ Status: Draft
       else
             chosen_entry_node = NULL
 
+
 §B. Appendix: Entry Points in Tor
 
   In order to clarify how this algorithm is supposed to be integrated with
@@ -420,5 +416,19 @@ Status: Draft
     When new directory_info_has_arrived:
 
         Do ON_NEW_CONSENSUS
+
+
+§C. Appendix: IS_SUITABLE helper function
+
+    A guard is suitable if it satisfies all of the folowing conditions:
+      - It's considered to be live.
+      - It'a a directory cache if a directory guard is requested.
+      - It's not the chosen exit node.
+      - It's not in the family of the chosen exit node.
+
+    This conforms to the existing conditions in "populate_live_entry_guards".
+
+    A guard is considered live if it satisfies all of the folowing conditions:
+      - 
 
 -*- coding: utf-8 -*-
