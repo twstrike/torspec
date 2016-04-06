@@ -426,9 +426,6 @@ Status: Draft
       - It's not the chosen exit node.
       - It's not in the family of the chosen exit node.
 
-      [XXX double check if we have covered all of the following configurations:
-           ReachableORAddresses, etc]
-
     This conforms to the existing conditions in "populate_live_entry_guards()".
 
     A guard is considered live if it satisfies all of the folowing conditions:
