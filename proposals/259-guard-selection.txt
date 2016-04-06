@@ -90,7 +90,7 @@ Status: Draft
 
 §2.1. The START algorithm
 
-  [xxx describe HOW the following settings affect the proposal:
+  [XXX describe HOW the following settings affect the proposal:
   UseBridges, UseEntryGuards, UseEntryGuardsAsDirGuards, EntryNodes]
 
   In order to start choosing an entry guard, use the START
@@ -184,7 +184,7 @@ Status: Draft
 
   If all entries have been tried, restore the previous state and resume
   the selection. If there is no previous state, transition to
-  STATE_TRY_REMAINING.  [xxx this reads weird now: there is only 2 states]
+  STATE_TRY_REMAINING.  [XXX this reads weird now: there is only 2 states]
 
 
 §2.2.2. The STATE_TRY_REMAINING state
@@ -192,7 +192,7 @@ Status: Draft
   Return each entry in USED_GUARDS that is not in PRIMARY_GUARDS in
   turn. For each entry, if it was not possible to connect to it and mark
   the entry as unreachable.
-  [xxx Should we filter them - without expanding? They have already been used
+  [XXX Should we filter them - without expanding? They have already been used
   anyways.]
 
   Return each entry from REMAINING_GUARDS using
@@ -267,7 +267,7 @@ Status: Draft
   FILTER_SET
       - Takes G as an argument, which should be a set of guards to filter.
       - Filter out guards in G that don't comply with IS_SUITABLE (see
-        appendix B).
+        §C. Appendix for details).
       - If the filtered set is smaller than MINIMUM_FILTERED_SAMPLE_SIZE and G
         is smaller than MAXIMUM_SAMPLE_SIZE_THRESHOLD, expand G and try to
         filter out again. G is expanded by adding one new guard at a time using
@@ -275,7 +275,7 @@ Status: Draft
       - If G is not smaller than MAXIMUM_SAMPLE_SIZE_THRESHOLD, G should not be
         expanded. Abort and report an error to the user.
 
-      [xxx Should SAMPLED_GUARDS be refilled in any other place? The user might
+      [XXX Should SAMPLED_GUARDS be refilled in any other place? The user might
       have enough filtered guards but they are still not reachable. The current
       proposal wont call START() until the algorithm succeeds, meaning that
       changing the configuration in an attempt to fix the issue will have no 
@@ -422,13 +422,43 @@ Status: Draft
 
     A guard is suitable if it satisfies all of the folowing conditions:
       - It's considered to be live.
-      - It'a a directory cache if a directory guard is requested.
+      - It's a directory cache if a directory guard is requested.
       - It's not the chosen exit node.
       - It's not in the family of the chosen exit node.
-
+  
     This conforms to the existing conditions in "populate_live_entry_guards".
 
     A guard is considered live if it satisfies all of the folowing conditions:
-      - 
+      - It's not disabled because of path bias issues (path_bias_disabled).
+      - It was not observed to become unusable according to the directory or
+        the user configuration (bad_since).
+      - It's marked for retry (can_retry) or it's been unreachable for some
+        time (unreachable_since) but enough time has passed since we last tried
+        to connect to it (entry_is_time_to_retry).
+      - It's in our node list, meaninig it's present in the latest consensus.
+      - It has a usable descriptor (either a routerdescriptor or a
+        microdescriptor) unless a directory guard is requested.
+      - It's a general-purpose router unless UseBridges is configured.
+      - It's reachable by the configuration (fascist_firewall_allows_node).
+
+      [XXX nedd uptime and need capacity was ignored. See node_is_unreliable()]
+      [XXX conditions involving UseBridges were ignored because they are
+           probably there to fit the existing code to this option.
+           If we completely skip our guard selection when UseBridges is set, we
+           also need to only choose live guards that also satisfy the ignored
+           conditions]
+      [XXX should we describe all the conditions that make a guard to be disabled
+           because of path bias issues?]
+
+      [XXX should we describe all conditions that make us considere the guard to
+           become unusable?]
+
+    This conforms to the existing conditions in "entry_is_live".
+
+      [XXX double check if we have covered all of the following configurations:
+        ClientUseIPv4, ClientUseIPv6, ClientPreferIPv6ORPort,
+        ExcludeNodes, FascistFirewall, FirewallPorts, GeoIPExcludeUnknown,
+        GuardLifetime, ReachableAddresses, ReachableDirAddresses,
+        ReachableORAddresses, etc]
 
 -*- coding: utf-8 -*-
