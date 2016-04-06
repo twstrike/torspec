@@ -427,10 +427,10 @@ Status: Draft
       - It's not in the family of the chosen exit node.
 
       [XXX double check if we have covered all of the following configurations:
-        ExcludeNodes, GeoIPExcludeUnknown, GuardLifetime, ReachableORAddresses,
+        GuardLifetime, ReachableORAddresses,
         etc]
 
-    This conforms to the existing conditions in "populate_live_entry_guards".
+    This conforms to the existing conditions in "populate_live_entry_guards()".
 
     A guard is considered live if it satisfies all of the folowing conditions:
       - It's not disabled because of path bias issues (path_bias_disabled).
@@ -457,6 +457,25 @@ Status: Draft
       [XXX should we describe all conditions that make us considere the guard to
            become unusable?]
 
-    This conforms to the existing conditions in "entry_is_live".
+    This conforms to the existing conditions in "entry_is_live()".
+
+
+    A guard is observed to become unusable accondring to the directory or the
+    user configuration if it satisfies any of the following conditions:
+      - It's not in our node list, meaninig it's present in the latest consensus.
+      - It's not currently running (is_running).
+      - It's not a bridge and not a configured bridge
+        (node_is_a_configured_bridge) and UseBridges is True.
+      - It's not a possible guard and is not in EntryNodes and UseBridges is
+        False. 
+      - It's in ExcludeNodes.
+      - It's not reachable by the configuration (fascist_firewall_allows_node).
+      - It's disabled because of path bias issues (path_bias_disabled).
+
+    This conforms to the existing conditions in "entry_guards_compute_status()".
+
+[XXX specify HOW and WHEN nodes are romved from the sample/used list.
+     See: entry_guards_compute_status()]
+[XXX: ignore EntryNodes in ExcludeNodes when loading from config]
 
 -*- coding: utf-8 -*-
