@@ -88,6 +88,25 @@ Status: Draft
   circuits.
 
 
+§2.1. Definitions
+
+  [XXX: Come up with definitions]
+  Bad guard: a guard is considered bad if it is not included in the newest
+  consensus. [XXX this is not Tor definition. bad_since is related to 
+  becoming unusable according to the directory or the user configuration, as
+  mentioned in the §C. Appendix. entry_is_live() verifies part of this "now" as
+  opposed to waiting until entry_guard_set_status() changes bad_since - which
+  happens only when a new consensus arrives.]
+  [XXX my vote is to replace this definition by Tor's definition]
+
+  Dead guard: a guard is considered dead if it's marked as bad for
+  ENTRY_GUARD_REMOVE_AFTER period (30 days) unless they have been disabled
+  because of path bias issues (path_bias_disabled).
+
+  Obsolete guard: a guard is considered obsolete if it was chosen by an Tor
+  version we can't recognize or it was chosen more than GUARD_LIFETIME ago.
+
+
 §2.1. The START algorithm
 
   [XXX describe HOW the following settings affect the proposal:
@@ -202,13 +221,22 @@ Status: Draft
 §2.2.3. ON_NEW_CONSENSUS
 
   First, ensure that all guard profiles are updated with information
-  about whether they were in the newest consensus or not. If a guard
-  is not included in the newest consensus, the guard is considered
-  bad.
+  about whether they were in the newest consensus or not. 
+
+  Update the bad status for all guards in USED_GUARDS and SAMPLED_GUARDS.
+  Remove all dead guards from USED_GUARDS and SAMPLED_GUARDS.
+  Remove all obsolete guards from USED_GUARDS and SAMPLED_GUARDS.
+
+  [XXX: the two paragraphs that follow actually mean: everytime you use
+        PRIMARY_GUARDS, take the first non-bad N_PRIMARY_GUARDS, adding new
+        to the list using NEXT_PRIMARY_GUARD when there's not enough.
+        This avoids "removing temporarily to adding it back where it was"].
 
   If any PRIMARY_GUARDS have become bad, remove the guard from
   PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
   N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
+  [XXX: Is this bad in the strict sense of "unlisted" or in the broad
+        definition used by Tor?]
 
   If any guards in USED_GUARDS have switched from being bad to being
   non-bad, add it back in the place it should have been in
@@ -253,6 +281,12 @@ Status: Draft
         PRIMARY_GUARDS and that is in the most recent consensus.
       - If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
         REMAINING_GUARDS as the argument.
+      [XXX: Should we ignore guards not IS_SUITABLE? Is it OK to use guards
+            that should be avoided by our configuration until they are filtered
+            out from USED_GUARDS and REMAINING_GUARDS at the next time we
+            START() after receiving a new consensus?
+            The problem is the output of IS_SUITABLE can change between START()
+            and now because the configuration can change.]
 
   NEXT_BY_BANDWIDTH
       - Takes G as an argument, which should be a set of guards to
@@ -447,7 +481,6 @@ Status: Draft
 
     This conforms to the existing conditions in "entry_is_live()".
 
-
     A guard is observed to become unusable according to the directory or the
     user configuration if it satisfies any of the following conditions:
       - It's not in our node list, meaninig it's present in the latest consensus.
@@ -462,8 +495,6 @@ Status: Draft
 
     This conforms to the existing conditions in "entry_guards_compute_status()".
 
-[XXX specify HOW and WHEN nodes are removed from the sample/used list. This is
-     where GuardLifetime is used. See: entry_guards_compute_status()]
 [XXX: ignore EntryNodes in ExcludeNodes when loading from config]
 
 -*- coding: utf-8 -*-
