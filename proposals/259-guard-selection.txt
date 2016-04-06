@@ -90,7 +90,6 @@ Status: Draft
 
 §2.1. Definitions
 
-  [XXX: Come up with definitions]
   Bad guard: a guard is considered bad if it is not included in the newest
   consensus. [XXX this is not Tor definition. bad_since is related to 
   becoming unusable according to the directory or the user configuration, as
@@ -110,7 +109,7 @@ Status: Draft
 §2.1. The START algorithm
 
   [XXX describe HOW the following settings affect the proposal:
-  UseBridges, UseEntryGuards, UseEntryGuardsAsDirGuards, EntryNodes]
+    UseEntryGuards, UseEntryGuardsAsDirGuards, EntryNodes]
 
   In order to start choosing an entry guard, use the START
   algorithm. This takes four arguments that can be used to fine tune
@@ -496,5 +495,22 @@ Status: Draft
     This conforms to the existing conditions in "entry_guards_compute_status()".
 
 [XXX: ignore EntryNodes in ExcludeNodes when loading from config]
+
+§D. Appendix: UseBridges and Bridges configurations
+
+  If options->UseBridges OR options->EntryNodes:
+    - guards = populate_live_entry_guards() - this is the "bridge flavour" of
+      IS_SUITABLE as mentioned before.
+    - return node_sl_choose_by_bandwidth(guards, WEIGHT_FOR_GUARD)
+  This is "choose a guard from S by bandwidth weight".
+
+  UseBridges and Bridges must be set together. Bridges go to bridge_list (via
+  bridge_add_from_config()), but how is it used?
+  learned_bridge_descriptor() adds the bridge to the global entry_guards if 
+  UseBridges = True.
+
+  We either keep the existing global entry_guards OR incorporate bridges in the
+  proposal (remove non bridges from USED_GUARDS, and REMAINING_GUARDS = bridges?)
+
 
 -*- coding: utf-8 -*-
