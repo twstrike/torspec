@@ -448,7 +448,7 @@ Status: Draft
     This conforms to the existing conditions in "entry_is_live()".
 
 
-    A guard is observed to become unusable accondring to the directory or the
+    A guard is observed to become unusable according to the directory or the
     user configuration if it satisfies any of the following conditions:
       - It's not in our node list, meaninig it's present in the latest consensus.
       - It's not currently running (is_running).
@@ -462,7 +462,7 @@ Status: Draft
 
     This conforms to the existing conditions in "entry_guards_compute_status()".
 
-[XXX specify HOW and WHEN nodes are romved from the sample/used list. This is
+[XXX specify HOW and WHEN nodes are removed from the sample/used list. This is
      where GuardLifetime is used. See: entry_guards_compute_status()]
 [XXX: ignore EntryNodes in ExcludeNodes when loading from config]
 
