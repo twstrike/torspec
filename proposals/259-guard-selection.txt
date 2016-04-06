@@ -427,8 +427,7 @@ Status: Draft
       - It's not in the family of the chosen exit node.
 
       [XXX double check if we have covered all of the following configurations:
-        GuardLifetime, ReachableORAddresses,
-        etc]
+           ReachableORAddresses, etc]
 
     This conforms to the existing conditions in "populate_live_entry_guards()".
 
@@ -474,8 +473,8 @@ Status: Draft
 
     This conforms to the existing conditions in "entry_guards_compute_status()".
 
-[XXX specify HOW and WHEN nodes are romved from the sample/used list.
-     See: entry_guards_compute_status()]
+[XXX specify HOW and WHEN nodes are romved from the sample/used list. This is
+     where GuardLifetime is used. See: entry_guards_compute_status()]
 [XXX: ignore EntryNodes in ExcludeNodes when loading from config]
 
 -*- coding: utf-8 -*-
