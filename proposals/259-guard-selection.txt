@@ -109,7 +109,7 @@ Status: Draft
 §2.1. The START algorithm
 
   [XXX describe HOW the following settings affect the proposal:
-    UseEntryGuards, UseEntryGuardsAsDirGuards, EntryNodes]
+    UseEntryGuards, UseEntryGuardsAsDirGuards]
 
   In order to start choosing an entry guard, use the START
   algorithm. This takes four arguments that can be used to fine tune
@@ -498,6 +498,8 @@ Status: Draft
 
 §D. Appendix: UseBridges and Bridges configurations
 
+  This is mutually exclusive with EntryNodes.
+
   If options->UseBridges OR options->EntryNodes:
     - guards = populate_live_entry_guards() - this is the "bridge flavour" of
       IS_SUITABLE as mentioned before.
@@ -512,5 +514,14 @@ Status: Draft
   We either keep the existing global entry_guards OR incorporate bridges in the
   proposal (remove non bridges from USED_GUARDS, and REMAINING_GUARDS = bridges?)
 
+§E. Appendix: EntryNodes configuration
+
+  This is mutually exclusive with Bridges.
+
+  The global entry_guards will be updated with entries in EntryNodes (see
+  entry_guards_set_from_config()).
+
+  We need to explain the strategy in this function and come up with a solution
+  for this.
 
 -*- coding: utf-8 -*-
