@@ -177,11 +177,6 @@ Status: Draft
   Return each entry in PRIMARY_GUARDS in turn. For each entry, if it
   was not possible to connect to it and mark the entry as unreachable
 
-  [XXX defining "was not possible to connect" as "entry is not live" according
-       to current definition of "live entry guard" in tor source code, seems
-       to improve success rate on the flaky network scenario.
-       See: https://github.com/twstrike/tor_guardsim/issues/1#issuecomment-187374942]
-
   If all entries have been tried, restore the previous state and resume
   the selection. If there is no previous state, transition to
   STATE_TRY_REMAINING.  [XXX this reads weird now: there is only 2 states]
