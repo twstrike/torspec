@@ -105,6 +105,8 @@ Status: Draft
   Obsolete guard: a guard is considered obsolete if it was chosen by an Tor
   version we can't recognize or it was chosen more than GUARD_LIFETIME ago.
 
+  Live entry guard: a guard is considered live it it conforms with the function
+  IS_LIVE (see §D. Appendix for details).
 
 §2.1. The START algorithm
 
@@ -294,8 +296,8 @@ Status: Draft
 
   FILTER_SET
       - Takes G as an argument, which should be a set of guards to filter.
-      - Filter out guards in G that don't comply with IS_SUITABLE (see
-        §C. Appendix for details).
+      - Filter out guards in G that don't comply with IS_LIVE (see
+        §D. Appendix for details).
       - If the filtered set is smaller than MINIMUM_FILTERED_SAMPLE_SIZE and G
         is smaller than MAXIMUM_SAMPLE_SIZE_THRESHOLD, expand G and try to
         filter out again. G is expanded by adding one new guard at a time using
@@ -406,6 +408,9 @@ Status: Draft
                                     guards_in_consensus)
 
         chosen_entry_node = ALGO_CHOOSE_ENTRY_GUARD_NEXT(context)
+        if not IS_SUITABLE(chosen_entry_node)
+          try another entry guard
+
       circuit = composeCircuit(chosen_entry_node)
       return circuit
 
@@ -449,12 +454,15 @@ Status: Draft
 §C. Appendix: IS_SUITABLE helper function
 
     A guard is suitable if it satisfies all of the folowing conditions:
-      - It's considered to be live.
+      - It's considered to be live, according to IS_LIVE.
       - It's a directory cache if a directory guard is requested.
       - It's not the chosen exit node.
       - It's not in the family of the chosen exit node.
 
     This conforms to the existing conditions in "populate_live_entry_guards()".
+
+
+§D. Appendix: IS_LIVE helper function
 
     A guard is considered live if it satisfies all of the folowing conditions:
       - It's not disabled because of path bias issues (path_bias_disabled).
@@ -496,7 +504,7 @@ Status: Draft
 
 [XXX: ignore EntryNodes in ExcludeNodes when loading from config]
 
-§D. Appendix: UseBridges and Bridges configurations
+§E. Appendix: UseBridges and Bridges configurations
 
   This is mutually exclusive with EntryNodes.
 
@@ -514,7 +522,7 @@ Status: Draft
   We either keep the existing global entry_guards OR incorporate bridges in the
   proposal (remove non bridges from USED_GUARDS, and REMAINING_GUARDS = bridges?)
 
-§E. Appendix: EntryNodes configuration
+§F. Appendix: EntryNodes configuration
 
   This is mutually exclusive with Bridges.
 
