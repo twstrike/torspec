@@ -107,6 +107,8 @@ Status: Draft
 
   Live entry guard: a guard is considered live it it conforms with the function
   IS_LIVE (see §D. Appendix for details).
+  [XXX If we have a IS_LIVE function, should we have IS_BAD, IS_DEAD and
+  IS_OBSOLETE functions as well?]
 
 §2.1. The START algorithm
 
@@ -126,11 +128,10 @@ Status: Draft
 
   SAMPLED_GUARDS
       This is a set that contains all guards that should be considered
-      for connection under utopic conditions. This set should be
-      persisted between runs. It will be filled in by the algorithm if
-      it's empty, or if it contains less than SAMPLE_SET_THRESHOLD
-      guards after winnowing out older guards. It should be filled by
-      using NEXT_BY_BANDWIDTH with GUARDS as an argument.
+      for connection. This set should be persisted between runs. It
+      should be filled by using NEXT_BY_BANDWIDTH with GUARDS as an
+      argument if it's empty, or if it contains less than SAMPLE_SET_THRESHOLD
+      guards after winnowing out older guards.
 
   N_PRIMARY_GUARDS
       The number of guards we should consider our primary
@@ -175,7 +176,7 @@ Status: Draft
 §2.2. The NEXT algorithm
 
   The NEXT algorithm is composed of several different possibly flows. The
-  first one is a simple state machine that can transfer between four
+  first one is a simple state machine that can transfer between two
   different states. Every time NEXT is invoked, it will resume at the
   state where it left off previously. In the course of selecting an
   entry guard, a new consensus can arrive. When that happens we need
@@ -195,25 +196,21 @@ Status: Draft
 §2.2.1. The STATE_PRIMARY_GUARDS state
 
   Return each entry in PRIMARY_GUARDS in turn. For each entry, if it
-  was not possible to connect to it and mark the entry as unreachable
+  was not possible to connect to it mark the entry as unreachable.
 
-  If all entries have been tried, restore the previous state and resume
-  the selection. If there is no previous state, transition to
-  STATE_TRY_REMAINING.  [XXX this reads weird now: there is only 2 states]
-
+  If all entries have been tried transition to STATE_TRY_REMAINING.
 
 §2.2.2. The STATE_TRY_REMAINING state
 
   Return each entry in USED_GUARDS that is not in PRIMARY_GUARDS in
-  turn. For each entry, if it was not possible to connect to it and mark
+  turn. For each entry, if it was not possible to connect to it mark
   the entry as unreachable.
   [XXX Should we filter them - without expanding? They have already been used
   anyways.]
 
-  Return each entry from REMAINING_GUARDS using
-  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
-  to it, remove the entry from REMAINING_GUARDS and mark it as
-  unreachable.
+  Return each entry from REMAINING_GUARDS using NEXT_BY_BANDWIDTH.
+  For each entry, if it was not possible to connect to it, remove
+  the entry from REMAINING_GUARDS and mark it as unreachable.
 
   If no entries remain in REMAINING_GUARDS, transition to
   STATE_PRIMARY_GUARDS.
