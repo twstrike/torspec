@@ -91,7 +91,7 @@ Status: Draft
 §2.1. Definitions
 
   Bad guard: a guard is considered bad if it is not included in the newest
-  consensus. [XXX this is not Tor definition. bad_since is related to 
+  consensus. [XXX this is not Tor definition. bad_since is related to
   becoming unusable according to the directory or the user configuration, as
   mentioned in the §C. Appendix. entry_is_live() verifies part of this "now" as
   opposed to waiting until entry_guard_set_status() changes bad_since - which
@@ -153,11 +153,11 @@ Status: Draft
   FILTERED_SAMPLED
       This is a set that contains all guards that we are willing to connect to.
       It will be obtained from calling FILTER_SET with SAMPLED_GUARDS as
-      argument. 
+      argument.
 
   REMAINING_GUARDS
       This is a running set of the guards we have not yet tried to connect to.
-      It should be initialized to be FILTERED_SAMPLED without USED_GUARDS. 
+      It should be initialized to be FILTERED_SAMPLED without USED_GUARDS.
 
   STATE
       A variable that keeps track of which state in the state
@@ -219,7 +219,7 @@ Status: Draft
 §2.2.3. ON_NEW_CONSENSUS
 
   First, ensure that all guard profiles are updated with information
-  about whether they were in the newest consensus or not. 
+  about whether they were in the newest consensus or not.
 
   Update the bad status for all guards in USED_GUARDS and SAMPLED_GUARDS.
   Remove all dead guards from USED_GUARDS and SAMPLED_GUARDS.
@@ -305,7 +305,7 @@ Status: Draft
       [XXX Should SAMPLED_GUARDS be refilled in any other place? The user might
       have enough filtered guards but they are still not reachable. The current
       proposal wont call START() until the algorithm succeeds, meaning that
-      changing the configuration in an attempt to fix the issue will have no 
+      changing the configuration in an attempt to fix the issue will have no
       effect until it succeeds.]
 
 
@@ -492,7 +492,7 @@ Status: Draft
       - It's not a bridge and not a configured bridge
         (node_is_a_configured_bridge) and UseBridges is True.
       - It's not a possible guard and is not in EntryNodes and UseBridges is
-        False. 
+        False.
       - It's in ExcludeNodes.
       - It's not reachable by the configuration (fascist_firewall_allows_node).
       - It's disabled because of path bias issues (path_bias_disabled).
@@ -513,20 +513,24 @@ Status: Draft
 
   UseBridges and Bridges must be set together. Bridges go to bridge_list (via
   bridge_add_from_config()), but how is it used?
-  learned_bridge_descriptor() adds the bridge to the global entry_guards if 
+  learned_bridge_descriptor() adds the bridge to the global entry_guards if
   UseBridges = True.
 
   We either keep the existing global entry_guards OR incorporate bridges in the
   proposal (remove non bridges from USED_GUARDS, and REMAINING_GUARDS = bridges?)
 
+  If UseBridges is set as true, we need to fill the SAMPLED_GUARDS
+  with bridges specified and learned from consensus.
+
 §F. Appendix: EntryNodes configuration
 
   This is mutually exclusive with Bridges.
 
-  The global entry_guards will be updated with entries in EntryNodes (see
-  entry_guards_set_from_config()).
+  The global entry_guards will be updated with entries in EntryNodes
+  (see entry_guards_set_from_config()).
 
-  We need to explain the strategy in this function and come up with a solution
-  for this.
+  If EntryNodes is set, we need to fill the SAMPLED_GUARDS with
+  EntryNodes specified in options.
+
 
 -*- coding: utf-8 -*-
