@@ -142,7 +142,7 @@ Status: Draft
 
   [XXX the plan is in the future all guards to be for_directory and if I'm not wrong,
   currently most of them already is for_directory. So we could to use in NEXT
-  this parameter DIR to return a guard that matches in this necesity]
+  this parameter DIR to return a guard that matches in this necessity]
 
   DIR
       If this argument is set, we should only consider guards that can
