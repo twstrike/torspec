@@ -236,14 +236,6 @@ Status: Draft
         to the list using NEXT_PRIMARY_GUARD when there's not enough.
         This avoids "removing temporarily to adding it back where it was"].
 
-  If any guards in USED_GUARDS have switched from being bad to being
-  non-bad, add it back in the place it should have been in
-  PRIMARY_GUARDS if it had been non-bad when populating
-  PRIMARY_GUARDS. If this results in PRIMARY_GUARDS being larger than
-  N_PRIMARY_GUARDS, truncate the list to be N_PRIMARY_GUARDS entries
-  long.
-
-
 §2.3. The SHOULD_CONTINUE algorithm
 
   This algorithm takes as an argument a boolean indicating whether the
