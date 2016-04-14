@@ -90,25 +90,17 @@ Status: Draft
 
 §2.1. Definitions
 
-  Bad guard: a guard is considered bad if it is not included in the newest
-  consensus. [XXX this is not Tor definition. bad_since is related to
-  becoming unusable according to the directory or the user configuration, as
-  mentioned in the §C. Appendix. entry_is_live() verifies part of this "now" as
-  opposed to waiting until entry_guard_set_status() changes bad_since - which
-  happens only when a new consensus arrives.]
-  [XXX my vote is to replace this definition by Tor's definition]
+  Bad guard: a guard is considered bad if it conforms with the function IS_BAD
+  (see §G. Appendix for details).
 
-  Dead guard: a guard is considered dead if it's marked as bad for
-  ENTRY_GUARD_REMOVE_AFTER period (30 days) unless they have been disabled
-  because of path bias issues (path_bias_disabled).
+  Dead guard: a guard is considered dead if it conforms with the function
+  IS_DEAD (see §H. Appendix for details).
 
-  Obsolete guard: a guard is considered obsolete if it was chosen by an Tor
-  version we can't recognize or it was chosen more than GUARD_LIFETIME ago.
+  Obsolete guard: a guard is considered obsolete if it conforms with the
+  function IS_OBSOLETE (see §I. Appendix for details).
 
-  Live entry guard: a guard is considered live it it conforms with the function
+  Live entry guard: a guard is considered live if it conforms with the function
   IS_LIVE (see §D. Appendix for details).
-  [XXX If we have a IS_LIVE function, should we have IS_BAD, IS_DEAD and
-  IS_OBSOLETE functions as well?]
 
 §2.1. The START algorithm
 
@@ -538,5 +530,25 @@ Status: Draft
   If EntryNodes is set, we need to fill the SAMPLED_GUARDS with
   EntryNodes specified in options.
 
+§G. Appendix: IS_BAD helper function
+
+  A guard is considered bad if is not included in the newest
+  consensus. [XXX this is not Tor definition. bad_since is related to
+  becoming unusable according to the directory or the user configuration, as
+  mentioned in the §C. Appendix. entry_is_live() verifies part of this "now" as
+  opposed to waiting until entry_guard_set_status() changes bad_since - which
+  happens only when a new consensus arrives.]
+  [XXX my vote is to replace this definition by Tor's definition]
+
+§H. Appendix: IS_DEAD helper function
+
+  A guard is considered dead if it's marked as bad for
+  ENTRY_GUARD_REMOVE_AFTER period (30 days) unless they have been disabled
+  because of path bias issues (path_bias_disabled).
+
+§I. Appendix: IS_OBSOLETE helper function
+
+  A guard is considered obsolete if it was chosen by an Tor
+  version we can't recognize or it was chosen more than GUARD_LIFETIME ago.
 
 -*- coding: utf-8 -*-
