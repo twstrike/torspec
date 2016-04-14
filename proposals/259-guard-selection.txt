@@ -305,7 +305,8 @@ Status: Draft
         filter out again. G is expanded by adding one new guard at a time using
         NEXT_BY_BANDWIDTH with GUARDS as an argument.
       - If G is not smaller than MAXIMUM_SAMPLE_SIZE_THRESHOLD, G should not be
-        expanded. Abort and report an error to the user.
+        expanded. Abort execution of this function by returning null and report
+	an error to the user.
 
       [XXX Should SAMPLED_GUARDS be refilled in any other place? The user might
       have enough filtered guards but they are still not reachable. The current
