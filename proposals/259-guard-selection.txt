@@ -236,12 +236,6 @@ Status: Draft
         to the list using NEXT_PRIMARY_GUARD when there's not enough.
         This avoids "removing temporarily to adding it back where it was"].
 
-  If any PRIMARY_GUARDS have become bad, remove the guard from
-  PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
-  N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
-  [XXX: Is this bad in the strict sense of "unlisted" or in the broad
-        definition used by Tor?]
-
   If any guards in USED_GUARDS have switched from being bad to being
   non-bad, add it back in the place it should have been in
   PRIMARY_GUARDS if it had been non-bad when populating
