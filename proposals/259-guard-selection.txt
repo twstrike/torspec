@@ -192,8 +192,11 @@ Status: Draft
 
 §2.2.1. The STATE_PRIMARY_GUARDS state
 
-  Return each entry in PRIMARY_GUARDS in turn. For each entry, if it
-  was not possible to connect to it mark the entry as unreachable.
+  Return each entry in PRIMARY_GUARDS in turn. For each entry, if the
+  guard should be retried and considered suitable use it. A guard is
+  considered to eligible to retry if is marked for retry or is live
+  and id not bad. Also, a guard is considered to be suitable if is
+  live and, if is a directory it should not be a cache.
 
   If all entries have been tried transition to STATE_TRY_REMAINING.
 
