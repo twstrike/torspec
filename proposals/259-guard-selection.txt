@@ -211,7 +211,7 @@ Status: Draft
   [XXX Should we filter them - without expanding? They have already been used
   anyways.]
 
-  Return each entry from REMAINING_GUARDS using NEXT_BY_BANDWIDTH.
+  Return each entry from REMAINING_GUARDS in turn.
   For each entry, if the guard should be retried and considered
   suitable use it and mark it as unreachable. A guard is
   considered to eligible to retry if is marked for retry or is live
