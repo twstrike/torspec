@@ -130,6 +130,9 @@ Status: Draft
       guards. These guards will be retried more frequently and will
       take precedence in most situations. By default the primary
       guards will be the first N_PRIMARY_GUARDS guards from USED_GUARDS.
+      When the algorith is used in constrained mode (have bridges or entry
+      nodes in the configuration file), this value should be 1 otherwise the
+      proposed value is 3.
 
 
   [XXX the plan is in the future all guards to be for_directory and if I'm not wrong,
