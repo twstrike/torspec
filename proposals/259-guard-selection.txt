@@ -454,13 +454,12 @@ Status: Draft
         (node_is_a_configured_bridge) and UseBridges is True.
       - It's not a possible guard and is not in EntryNodes and UseBridges is
         False.
-      - It's in ExcludeNodes.
+      - It's in ExcludeNodes. Nevertheless this is ignored when
+    loading from config.
       - It's not reachable by the configuration (fascist_firewall_allows_node).
       - It's disabled because of path bias issues (path_bias_disabled).
 
     This conforms to the existing conditions in "entry_guards_compute_status()".
-
-[XXX: ignore EntryNodes in ExcludeNodes when loading from config]
 
 §E. Appendix: UseBridges and Bridges configurations
 
