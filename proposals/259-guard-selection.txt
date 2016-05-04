@@ -104,9 +104,6 @@ Status: Draft
 
 §2.1. The START algorithm
 
-  [XXX describe HOW the following settings affect the proposal:
-    UseEntryGuards, UseEntryGuardsAsDirGuards]
-
   In order to start choosing an entry guard, use the START
   algorithm. This takes four arguments that can be used to fine tune
   the workings:
