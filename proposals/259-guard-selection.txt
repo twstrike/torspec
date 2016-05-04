@@ -444,7 +444,6 @@ Status: Draft
       - It's a general-purpose router unless UseBridges is configured.
       - It's reachable by the configuration (fascist_firewall_allows_node).
 
-      [XXX nedd uptime and need capacity was ignored. See node_is_unreliable()]
       [XXX conditions involving UseBridges were ignored because they are
            probably there to fit the existing code to this option.
            If we completely skip our guard selection when UseBridges is set, we
