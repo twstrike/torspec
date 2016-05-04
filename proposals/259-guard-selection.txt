@@ -197,13 +197,7 @@ Status: Draft
 §2.2.2. The STATE_TRY_REMAINING state
 
   Return each entry in USED_GUARDS that is not in PRIMARY_GUARDS in
-  turn.For each entry, if the guard should be retried and considered
-  suitable use it. A guard is considered to eligible to retry if is
-  marked for retry or is live and id not bad. Also, a guard is
-  considered to be suitable if is live and, if is a directory it
-  should not be a cache.
-  [XXX Should we filter them - without expanding? They have already been used
-  anyways.]
+  turn.For each entry, if a guard is found return it.
 
   Return each entry from REMAINING_GUARDS in turn.
   For each entry, if the guard should be retried and considered
