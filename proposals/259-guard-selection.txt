@@ -444,9 +444,6 @@ Status: Draft
       - It's a general-purpose router unless UseBridges is configured.
       - It's reachable by the configuration (fascist_firewall_allows_node).
 
-      [XXX should we describe all the conditions that make a guard to be disabled
-           because of path bias issues?]
-
     This conforms to the existing conditions in "entry_is_live()".
 
     A guard is observed to become unusable according to the directory or the
