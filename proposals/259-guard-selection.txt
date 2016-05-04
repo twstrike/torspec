@@ -444,11 +444,6 @@ Status: Draft
       - It's a general-purpose router unless UseBridges is configured.
       - It's reachable by the configuration (fascist_firewall_allows_node).
 
-      [XXX conditions involving UseBridges were ignored because they are
-           probably there to fit the existing code to this option.
-           If we completely skip our guard selection when UseBridges is set, we
-           also need to only choose live guards that also satisfy the ignored
-           conditions]
       [XXX should we describe all the conditions that make a guard to be disabled
            because of path bias issues?]
 
