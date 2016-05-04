@@ -495,12 +495,7 @@ Status: Draft
 §G. Appendix: IS_BAD helper function
 
   A guard is considered bad if is not included in the newest
-  consensus. [XXX this is not Tor definition. bad_since is related to
-  becoming unusable according to the directory or the user configuration, as
-  mentioned in the §C. Appendix. entry_is_live() verifies part of this "now" as
-  opposed to waiting until entry_guard_set_status() changes bad_since - which
-  happens only when a new consensus arrives.]
-  [XXX my vote is to replace this definition by Tor's definition]
+  consensus.
 
 §H. Appendix: IS_DEAD helper function
 
