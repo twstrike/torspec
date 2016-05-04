@@ -267,13 +267,7 @@ Status: Draft
         NEXT_BY_BANDWIDTH with GUARDS as an argument.
       - If G is not smaller than MAXIMUM_SAMPLE_SIZE_THRESHOLD, G should not be
         expanded. Abort execution of this function by returning null and report
-	an error to the user.
-
-      [XXX Should SAMPLED_GUARDS be refilled in any other place? The user might
-      have enough filtered guards but they are still not reachable. The current
-      proposal wont call START() until the algorithm succeeds, meaning that
-      changing the configuration in an attempt to fix the issue will have no
-      effect until it succeeds.]
+	      an error to the user.
 
 
 §3. Consensus Parameters, & Configurable Variables
