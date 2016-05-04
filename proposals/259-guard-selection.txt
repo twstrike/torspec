@@ -134,11 +134,6 @@ Status: Draft
       nodes in the configuration file), this value should be 1 otherwise the
       proposed value is 3.
 
-
-  [XXX the plan is in the future all guards to be for_directory and if I'm not wrong,
-  currently most of them already is for_directory. So we could to use in NEXT
-  this parameter DIR to return a guard that matches in this necessity]
-
   DIR
       If this argument is set, we should only consider guards that can
       be directory guards. If not set, we will consider all guards.
