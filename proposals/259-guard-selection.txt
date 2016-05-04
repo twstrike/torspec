@@ -254,12 +254,6 @@ Status: Draft
         PRIMARY_GUARDS and that is in the most recent consensus.
       - If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
         REMAINING_GUARDS as the argument.
-      [XXX: Should we ignore guards not IS_SUITABLE? Is it OK to use guards
-            that should be avoided by our configuration until they are filtered
-            out from USED_GUARDS and REMAINING_GUARDS at the next time we
-            START() after receiving a new consensus?
-            The problem is the output of IS_SUITABLE can change between START()
-            and now because the configuration can change.]
 
   NEXT_BY_BANDWIDTH
       - Takes G as an argument, which should be a set of guards to
