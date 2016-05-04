@@ -219,11 +219,6 @@ Status: Draft
   Remove all dead guards from USED_GUARDS and SAMPLED_GUARDS.
   Remove all obsolete guards from USED_GUARDS and SAMPLED_GUARDS.
 
-  [XXX: the two paragraphs that follow actually mean: everytime you use
-        PRIMARY_GUARDS, take the first non-bad N_PRIMARY_GUARDS, adding new
-        to the list using NEXT_PRIMARY_GUARD when there's not enough.
-        This avoids "removing temporarily to adding it back where it was"].
-
 §2.3. The SHOULD_CONTINUE algorithm
 
   This algorithm takes as an argument a boolean indicating whether the
